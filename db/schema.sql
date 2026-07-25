@@ -54,8 +54,8 @@ CREATE TABLE presupuestos (
     id_periodo             INTEGER NOT NULL REFERENCES periodos_fiscales(id_periodo),
     monto_total_propuesto  NUMERIC(14,2) NOT NULL,
     monto_total_aprobado   NUMERIC(14,2),
-    estado                 VARCHAR(20) NOT NULL DEFAULT 'Pendiente'
-                           CHECK (estado IN ('Pendiente','Aprobado','Rechazado')),
+    estado                 VARCHAR(20) NOT NULL DEFAULT 'Borrador'
+                           CHECK (estado IN ('Borrador','Pendiente','Aprobado','Rechazado')),
     motivo_rechazo         TEXT,
     id_usuario_elabora     INTEGER NOT NULL REFERENCES usuarios(id_usuario),
     id_usuario_aprueba     INTEGER REFERENCES usuarios(id_usuario),
