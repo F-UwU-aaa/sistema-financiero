@@ -271,3 +271,27 @@ export interface BalanceResultado {
   balance_general: BalanceGeneral;
   ejecucion_presupuestaria: EjecucionPresupuestaria;
 }
+
+export interface ObservacionAuditoria {
+  id_observacion: number;
+  modulo_afectado: string;
+  referencia_id: number | null;
+  tipo_transaccion: string | null;
+  motivo: string;
+  estado: string;
+  id_usuario_auditor: number;
+  respuesta_gerente: string | null;
+  fecha_registro: string;
+  fecha_cierre: string | null;
+  nombre_auditor?: string;
+  nombre_gerente?: string;
+}
+
+export interface Notificacion {
+  id_notificacion: number;
+  id_usuario_destino: number;
+  tipo_evento: string;
+  mensaje: string;
+  leida: boolean;
+  fecha_creacion: string;
+}
