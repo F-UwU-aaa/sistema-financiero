@@ -1,6 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
+import Card from "@/components/ui/Card";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import Modal from "@/components/ui/Modal";
+import Alert from "@/components/ui/Alert";
 
 interface Presupuesto {
   id_presupuesto: number;
@@ -123,79 +131,97 @@ export default function PresupuestosGerentePage() {
     cargarPresupuestos();
   }
 
-  const coloresEstado: Record<string, string> = {
-    Borrador: "text-gray-600",
-    Pendiente: "text-yellow-600",
-    Aprobado: "text-green-600",
-    Rechazado: "text-red-600",
-  };
+  const columns: Column<Presupuesto>[] = [
+    { key: "nombre_area", header: "Área" },
+    { key: "nombre_periodo", header: "Período" },
+    { key: "monto_total_propuesto", header: "Propuesto", align: "right", render: (r) => `$${Number(r.monto_total_propuesto).toLocaleString()}` },
+    { key: "elabora_nombre", header: "Elaborado por" },
+    { key: "estado", header: "Estado", render: (r) => <EstadoBadge estado={r.estado} /> },
+    { key: "acciones", header: "Acciones", align: "center", render: (r) => (
+      <Button variant="primary" size="sm" onClick={() => verDetalle(r)}>Ver detalle</Button>
+    ) },
+  ];
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Aprobación de Presupuestos</h1>
+      <PageHeader title="Aprobación de Presupuestos" />
 
       <div className="mb-4 flex gap-4">
-        <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los períodos</option>
-          {periodos.map(p => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre_periodo}</option>)}
-        </select>
-        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los estados</option>
-          <option value="Pendiente">Pendiente</option>
-          <option value="Aprobado">Aprobado</option>
-          <option value="Rechazado">Rechazado</option>
-        </select>
-        <select value={filtroArea} onChange={(e) => setFiltroArea(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todas las áreas</option>
-          {areas.map(a => <option key={a.id_area} value={a.id_area}>{a.nombre_area}</option>)}
-        </select>
+        <div className="w-48">
+          <Select
+            label="Período"
+            value={filtroPeriodo}
+            onChange={(e) => setFiltroPeriodo(e.target.value)}
+            placeholder="Todos los períodos"
+            options={periodos.map(p => ({ value: p.id_periodo, label: p.nombre_periodo }))}
+          />
+        </div>
+        <div className="w-48">
+          <Select
+            label="Estado"
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            placeholder="Todos los estados"
+            options={[
+              { value: "Pendiente", label: "Pendiente" },
+              { value: "Aprobado", label: "Aprobado" },
+              { value: "Rechazado", label: "Rechazado" },
+            ]}
+          />
+        </div>
+        <div className="w-48">
+          <Select
+            label="Área"
+            value={filtroArea}
+            onChange={(e) => setFiltroArea(e.target.value)}
+            placeholder="Todas las áreas"
+            options={areas.map(a => ({ value: a.id_area, label: a.nombre_area }))}
+          />
+        </div>
       </div>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="p-3">Área</th>
-            <th className="p-3">Período</th>
-            <th className="p-3">Propuesto</th>
-            <th className="p-3">Elaborado por</th>
-            <th className="p-3">Estado</th>
-            <th className="p-3">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {presupuestos.map(p => (
-            <tr key={p.id_presupuesto} className="border-b">
-              <td className="p-3">{p.nombre_area}</td>
-              <td className="p-3">{p.nombre_periodo}</td>
-              <td className="p-3">${Number(p.monto_total_propuesto).toLocaleString()}</td>
-              <td className="p-3">{p.elabora_nombre}</td>
-              <td className={`p-3 font-medium ${coloresEstado[p.estado] || ""}`}>{p.estado}</td>
-              <td className="p-3">
-                <button onClick={() => verDetalle(p)} className="text-blue-600 hover:underline text-xs">Ver detalle</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        data={presupuestos}
+        keyExtractor={(r) => r.id_presupuesto}
+        emptyMessage="No hay presupuestos para mostrar"
+      />
 
-      {modal === "detalle" && presupuestoActual && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6">
-            <h2 className="mb-2 text-lg font-bold">Detalle de propuesta</h2>
-            <p className="mb-1 text-sm text-gray-600">Área: {presupuestoActual.nombre_area}</p>
-            <p className="mb-1 text-sm text-gray-600">Período: {presupuestoActual.nombre_periodo}</p>
-            <p className="mb-1 text-sm text-gray-600">Elaborado por: {presupuestoActual.elabora_nombre}</p>
+      <Modal
+        open={modal === "detalle" && !!presupuestoActual}
+        onClose={() => setModal(null)}
+        title="Detalle de propuesta"
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModal(null)}>Cerrar</Button>
+            {presupuestoActual?.estado === "Pendiente" && (
+              <>
+                <Button variant="danger" onClick={rechazar} disabled={!motivo.trim()}>Rechazar</Button>
+                <Button variant="success" onClick={aprobar}>Aprobar</Button>
+              </>
+            )}
+          </>
+        }
+      >
+        {presupuestoActual && (
+          <>
+            <div className="space-y-1 text-sm text-gray-600 mb-4">
+              <p>Área: {presupuestoActual.nombre_area}</p>
+              <p>Período: {presupuestoActual.nombre_periodo}</p>
+              <p>Elaborado por: {presupuestoActual.elabora_nombre}</p>
+            </div>
 
-            <div className="my-3">
+            <Card padding={false} className="mb-4">
               <table className="w-full text-left text-xs">
-                <thead className="border-b"><tr><th className="p-2">Categoría</th><th className="p-2">Propuesto</th>{presupuestoActual.estado === "Pendiente" && <th className="p-2">Ajustar a</th>}</tr></thead>
+                <thead className="border-b bg-gray-50"><tr><th className="p-2">Categoría</th><th className="p-2 text-right">Propuesto</th>{presupuestoActual.estado === "Pendiente" && <th className="p-2 text-right">Ajustar a</th>}</tr></thead>
                 <tbody>
                   {partidas.map(pp => (
                     <tr key={pp.id_partida} className="border-b">
                       <td className="p-2">{pp.nombre_categoria}</td>
-                      <td className="p-2">${Number(pp.monto_asignado).toLocaleString()}</td>
+                      <td className="p-2 text-right">${Number(pp.monto_asignado).toLocaleString()}</td>
                       {presupuestoActual.estado === "Pendiente" && (
-                        <td className="p-2">
+                        <td className="p-2 text-right">
                           <input
                             type="number"
                             value={montosAjustados[pp.id_partida] ?? pp.monto_asignado}
@@ -208,7 +234,7 @@ export default function PresupuestosGerentePage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Card>
 
             <div className="mb-3 flex justify-between text-sm font-medium">
               <span>Total propuesto: ${Number(presupuestoActual.monto_total_propuesto).toLocaleString()}</span>
@@ -218,36 +244,26 @@ export default function PresupuestosGerentePage() {
             </div>
 
             {presupuestoActual.estado === "Rechazado" && presupuestoActual.motivo_rechazo && (
-              <div className="mb-3 rounded bg-red-50 p-3 text-sm text-red-700">
+              <Alert variant="error" className="mb-3">
                 <strong>Motivo del rechazo:</strong> {presupuestoActual.motivo_rechazo}
-              </div>
+              </Alert>
             )}
 
             {presupuestoActual.estado === "Pendiente" && (
               <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Motivo del rechazo (requerido si rechaza)</label>
+                <label className="mb-1 block text-sm font-medium text-text">Motivo del rechazo (requerido si rechaza)</label>
                 <textarea
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
                   rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   placeholder="Indique el motivo si rechaza esta propuesta..."
                 />
               </div>
             )}
-
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cerrar</button>
-              {presupuestoActual.estado === "Pendiente" && (
-                <>
-                  <button onClick={rechazar} disabled={!motivo.trim()} className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50">Rechazar</button>
-                  <button onClick={aprobar} className="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">Aprobar</button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

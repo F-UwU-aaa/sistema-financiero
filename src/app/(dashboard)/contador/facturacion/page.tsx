@@ -2,6 +2,16 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { Factura, SolicitudPago, Proveedor, Cliente, Categoria, PartidaPresupuestaria } from "@/types";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
+import Input from "@/components/ui/Input";
+import Card from "@/components/ui/Card";
+import Modal from "@/components/ui/Modal";
+import Alert from "@/components/ui/Alert";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import DataTable from "@/components/ui/DataTable";
+import type { Column } from "@/components/ui/DataTable";
 
 interface PartidaConSaldo extends PartidaPresupuestaria {
   saldo_disponible: number;
@@ -147,200 +157,192 @@ export default function FacturacionPage() {
     return categorias.find(c => c.id_categoria === id)?.nombre_categoria || `Cat #${id}`;
   }
 
-  const coloresEstado: Record<string, string> = {
-    Pendiente: "text-yellow-600",
-    Solicitada: "text-blue-600",
-    Pagada: "text-green-600",
-    Cobrada: "text-green-600",
-    Anulada: "text-red-600",
-  };
+  const columns: Column<Factura>[] = [
+    { key: "numero_factura", header: "# Factura", render: (row) => <span className="font-medium">{row.numero_factura}</span> },
+    { key: "tipo", header: "Tipo" },
+    { key: "nombre_proveedor", header: "Proveedor / Cliente", render: (row) => row.nombre_proveedor || row.nombre_cliente || "—" },
+    { key: "categoria_partida", header: "Partida", render: (row) => row.categoria_partida || "—" },
+    { key: "monto", header: "Monto", render: (row) => `$${Number(row.monto).toLocaleString()}` },
+    { key: "fecha_emision", header: "Emisión" },
+    { key: "fecha_vencimiento", header: "Vencimiento", render: (row) => row.fecha_vencimiento || "—" },
+    { key: "estado", header: "Estado", render: (row) => (
+      <div>
+        <EstadoBadge estado={row.estado} />
+        {row.estado === "Anulada" && row.motivo_anulacion && (
+          <span className="mt-1 block text-xs text-red-500" title={row.motivo_anulacion}>
+            {row.motivo_anulacion.length > 30 ? row.motivo_anulacion.slice(0, 30) + "..." : row.motivo_anulacion}
+          </span>
+        )}
+      </div>
+    )},
+    { key: "id_factura", header: "Acciones", render: (row) => (
+      <div className="flex gap-2">
+        {row.estado === "Pendiente" && row.tipo === "Compra" && (
+          <Button variant="ghost" size="sm" onClick={() => solicitarPago(row)}>Solicitar pago</Button>
+        )}
+        {(row.estado === "Pendiente" || row.estado === "Solicitada") && (
+          <Button variant="danger" size="sm" onClick={() => abrirAnular(row)}>Anular</Button>
+        )}
+      </div>
+    )},
+  ];
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Facturación</h1>
-        <button onClick={abrirCrear} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-          + Nueva factura
-        </button>
-      </div>
+      <PageHeader
+        title="Facturación"
+        actions={<Button variant="primary" size="sm" onClick={abrirCrear}>+ Nueva factura</Button>}
+      />
 
-      {resultadoSolicitud && (
-        <div className="mb-4 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
-          {resultadoSolicitud}
-        </div>
-      )}
+      {resultadoSolicitud && <Alert variant="success">{resultadoSolicitud}</Alert>}
 
       <div className="mb-4 flex gap-4">
-        <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los tipos</option>
-          <option value="Compra">Compra</option>
-          <option value="Venta">Venta</option>
-        </select>
-        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los estados</option>
-          <option value="Pendiente">Pendiente</option>
-          <option value="Solicitada">Solicitada</option>
-          <option value="Pagada">Pagada</option>
-          <option value="Cobrada">Cobrada</option>
-          <option value="Anulada">Anulada</option>
-        </select>
+        <Select
+          options={[
+            { value: "", label: "Todos los tipos" },
+            { value: "Compra", label: "Compra" },
+            { value: "Venta", label: "Venta" },
+          ]}
+          value={filtroTipo}
+          onChange={(e) => setFiltroTipo(e.target.value)}
+        />
+        <Select
+          options={[
+            { value: "", label: "Todos los estados" },
+            { value: "Pendiente", label: "Pendiente" },
+            { value: "Solicitada", label: "Solicitada" },
+            { value: "Pagada", label: "Pagada" },
+            { value: "Cobrada", label: "Cobrada" },
+            { value: "Anulada", label: "Anulada" },
+          ]}
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+        />
       </div>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="p-3"># Factura</th>
-            <th className="p-3">Tipo</th>
-            <th className="p-3">Proveedor / Cliente</th>
-            <th className="p-3">Partida</th>
-            <th className="p-3">Monto</th>
-            <th className="p-3">Emisión</th>
-            <th className="p-3">Vencimiento</th>
-            <th className="p-3">Estado</th>
-            <th className="p-3">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {facturas.map(f => (
-            <tr key={f.id_factura} className="border-b">
-              <td className="p-3 font-medium">{f.numero_factura}</td>
-              <td className="p-3">{f.tipo}</td>
-              <td className="p-3">{f.nombre_proveedor || f.nombre_cliente || "—"}</td>
-              <td className="p-3">{f.categoria_partida || "—"}</td>
-              <td className="p-3">${Number(f.monto).toLocaleString()}</td>
-              <td className="p-3">{f.fecha_emision}</td>
-              <td className="p-3">{f.fecha_vencimiento || "—"}</td>
-              <td className={`p-3 font-medium ${coloresEstado[f.estado] || ""}`}>
-                {f.estado}
-                {f.estado === "Anulada" && f.motivo_anulacion && (
-                  <span className="block text-xs text-red-500 mt-1" title={f.motivo_anulacion}>
-                    {f.motivo_anulacion.length > 30 ? f.motivo_anulacion.slice(0, 30) + "..." : f.motivo_anulacion}
-                  </span>
-                )}
-              </td>
-              <td className="p-3">
-                {f.estado === "Pendiente" && f.tipo === "Compra" && (
-                  <button onClick={() => solicitarPago(f)} className="mr-3 text-blue-600 hover:underline text-xs">
-                    Solicitar pago
-                  </button>
-                )}
-                {(f.estado === "Pendiente" || f.estado === "Solicitada") && (
-                  <button onClick={() => abrirAnular(f)} className="text-red-600 hover:underline text-xs">
-                    Anular
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Card>
+        <DataTable columns={columns} data={facturas} keyExtractor={(f) => f.id_factura} emptyMessage="No hay facturas registradas" />
+      </Card>
 
-      {modal === "crear" && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold">Nueva factura</h2>
+      <Modal
+        open={modal === "crear"}
+        onClose={() => setModal(null)}
+        title="Nueva factura"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={crearFactura}
+              disabled={!formNumero || !formMonto || !formFechaEmision || (formTipo === "Compra" && !formProveedor) || (formTipo === "Venta" && !formCliente)}
+            >Registrar factura</Button>
+          </>
+        }
+      >
+        <div className="mb-3">
+          <Select
+            label="Tipo"
+            options={[
+              { value: "Compra", label: "Compra (proveedor)" },
+              { value: "Venta", label: "Venta (cliente)" },
+            ]}
+            value={formTipo}
+            onChange={(e) => setFormTipo(e.target.value as "Compra" | "Venta")}
+          />
+        </div>
 
-            <div className="mb-3">
-              <label className="mb-1 block text-sm font-medium text-gray-700">Tipo</label>
-              <select value={formTipo} onChange={e => setFormTipo(e.target.value as "Compra" | "Venta")} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-                <option value="Compra">Compra (proveedor)</option>
-                <option value="Venta">Venta (cliente)</option>
-              </select>
-            </div>
+        {formTipo === "Compra" ? (
+          <div className="mb-3">
+            <Select
+              label="Proveedor"
+              options={[
+                { value: "", label: "Seleccionar proveedor" },
+                ...proveedores.map(p => ({ value: String(p.id_proveedor), label: p.razon_social })),
+              ]}
+              value={formProveedor}
+              onChange={(e) => setFormProveedor(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div className="mb-3">
+            <Select
+              label="Cliente"
+              options={[
+                { value: "", label: "Seleccionar cliente" },
+                ...clientes.map(c => ({ value: String(c.id_cliente), label: c.razon_social })),
+              ]}
+              value={formCliente}
+              onChange={(e) => setFormCliente(e.target.value)}
+            />
+          </div>
+        )}
 
-            {formTipo === "Compra" ? (
-              <div className="mb-3">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Proveedor</label>
-                <select value={formProveedor} onChange={e => setFormProveedor(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">Seleccionar proveedor</option>
-                  {proveedores.map(p => <option key={p.id_proveedor} value={p.id_proveedor}>{p.razon_social}</option>)}
-                </select>
-              </div>
-            ) : (
-              <div className="mb-3">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Cliente</label>
-                <select value={formCliente} onChange={e => setFormCliente(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">Seleccionar cliente</option>
-                  {clientes.map(c => <option key={c.id_cliente} value={c.id_cliente}>{c.razon_social}</option>)}
-                </select>
-              </div>
-            )}
+        <div className="mb-3">
+          <Input label="Número de factura" value={formNumero} onChange={e => setFormNumero(e.target.value)} placeholder="Ej: FAC-001" />
+        </div>
 
-            <div className="mb-3">
-              <label className="mb-1 block text-sm font-medium text-gray-700">Número de factura</label>
-              <input type="text" value={formNumero} onChange={e => setFormNumero(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="Ej: FAC-001" />
-            </div>
-
-            <div className="mb-3 flex gap-3">
-              <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Monto</label>
-                <input type="number" value={formMonto} onChange={e => setFormMonto(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" min="0" step="0.01" />
-              </div>
-              <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Fecha emisión</label>
-                <input type="date" value={formFechaEmision} onChange={e => setFormFechaEmision(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-              </div>
-            </div>
-
-            <div className="mb-3">
-              <label className="mb-1 block text-sm font-medium text-gray-700">Fecha vencimiento (opcional)</label>
-              <input type="date" value={formFechaVencimiento} onChange={e => setFormFechaVencimiento(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-
-            {formTipo === "Compra" && (
-              <div className="mb-3">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Partida presupuestaria (opcional)</label>
-                <select value={formPartida} onChange={e => setFormPartida(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">Sin partida</option>
-                  {partidas.map(p => (
-                    <option key={p.id_partida} value={p.id_partida}>
-                      {nombreCategoria(p.id_categoria)} — Saldo: ${p.saldo_disponible.toLocaleString()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 mt-4">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cancelar</button>
-              <button
-                onClick={crearFactura}
-                disabled={!formNumero || !formMonto || !formFechaEmision || (formTipo === "Compra" && !formProveedor) || (formTipo === "Venta" && !formCliente)}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                Registrar factura
-              </button>
-            </div>
+        <div className="mb-3 flex gap-3">
+          <div className="flex-1">
+            <Input label="Monto" type="number" value={formMonto} onChange={e => setFormMonto(e.target.value)} />
+          </div>
+          <div className="flex-1">
+            <Input label="Fecha emisión" type="date" value={formFechaEmision} onChange={e => setFormFechaEmision(e.target.value)} />
           </div>
         </div>
-      )}
 
-      {modal === "anular" && facturaSeleccionada && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h2 className="mb-2 text-lg font-bold">Anular factura</h2>
+        <div className="mb-3">
+          <Input label="Fecha vencimiento (opcional)" type="date" value={formFechaVencimiento} onChange={e => setFormFechaVencimiento(e.target.value)} />
+        </div>
+
+        {formTipo === "Compra" && (
+          <div className="mb-3">
+            <Select
+              label="Partida presupuestaria (opcional)"
+              options={[
+                { value: "", label: "Sin partida" },
+                ...partidas.map(p => ({
+                  value: String(p.id_partida),
+                  label: `${nombreCategoria(p.id_categoria)} — Saldo: $${p.saldo_disponible.toLocaleString()}`,
+                })),
+              ]}
+              value={formPartida}
+              onChange={(e) => setFormPartida(e.target.value)}
+            />
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={modal === "anular"}
+        onClose={() => setModal(null)}
+        title="Anular factura"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button variant="danger" size="sm" onClick={anularFactura} disabled={!motivoAnulacion.trim()}>Anular</Button>
+          </>
+        }
+      >
+        {facturaSeleccionada && (
+          <>
             <p className="mb-1 text-sm text-gray-600">Factura: {facturaSeleccionada.numero_factura}</p>
             <p className="mb-3 text-sm text-gray-600">Monto: ${Number(facturaSeleccionada.monto).toLocaleString()}</p>
-            <textarea
-              value={motivoAnulacion}
-              onChange={e => setMotivoAnulacion(e.target.value)}
-              rows={3}
-              placeholder="Motivo de anulación (requerido)"
-              className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cancelar</button>
-              <button
-                onClick={anularFactura}
-                disabled={!motivoAnulacion.trim()}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                Anular
-              </button>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Motivo de anulación (requerido)</label>
+              <textarea
+                value={motivoAnulacion}
+                onChange={e => setMotivoAnulacion(e.target.value)}
+                rows={3}
+                placeholder="Motivo de anulación"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

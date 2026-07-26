@@ -2,13 +2,19 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { Proveedor, Cliente } from "@/types";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import Modal from "@/components/ui/Modal";
 
 export default function AprobacionEntidadesPage() {
   const [pestaña, setPestaña] = useState<"proveedores" | "clientes">("proveedores");
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Aprobación de Proveedores y Clientes</h1>
+      <PageHeader title="Aprobación de Proveedores y Clientes" />
 
       <div className="mb-6 flex gap-2 border-b">
         <button onClick={() => setPestaña("proveedores")} className={`px-4 py-2 text-sm ${pestaña === "proveedores" ? "border-b-2 border-blue-600 font-medium text-blue-600" : "text-gray-600 hover:text-gray-900"}`}>
@@ -61,54 +67,62 @@ function TablaProveedores() {
     if (res.ok) { setModal(null); cargar(); }
   }
 
+  const columns: Column<Proveedor>[] = [
+    { key: "razon_social", header: "Razón Social" },
+    { key: "nit", header: "NIT" },
+    { key: "monto_contrato", header: "Monto contrato", align: "right", render: (r) => r.monto_contrato ? `$${Number(r.monto_contrato).toLocaleString()}` : "—" },
+    { key: "estado", header: "Estado", render: (r) => <EstadoBadge estado={r.estado} /> },
+    { key: "acciones", header: "Acciones", align: "center", render: (r) => r.estado === "Pendiente" ? (
+      <div className="flex items-center justify-center gap-2">
+        <Button variant="success" size="sm" onClick={() => aprobar(r.id_proveedor)}>Aprobar</Button>
+        <Button variant="danger" size="sm" onClick={() => abrirRechazar(r)}>Rechazar</Button>
+      </div>
+    ) : null },
+  ];
+
   return (
     <>
-      <div className="mb-4">
-        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos</option>
-          <option value="Pendiente">Pendientes</option>
-          <option value="Aprobado">Aprobados</option>
-          <option value="Rechazado">Rechazados</option>
-        </select>
+      <div className="mb-4 w-48">
+        <Select
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+          placeholder="Todos"
+          options={[
+            { value: "Pendiente", label: "Pendientes" },
+            { value: "Aprobado", label: "Aprobados" },
+            { value: "Rechazado", label: "Rechazados" },
+          ]}
+        />
       </div>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr><th className="p-3">Razón Social</th><th className="p-3">NIT</th><th className="p-3">Monto contrato</th><th className="p-3">Estado</th><th className="p-3">Acciones</th></tr>
-        </thead>
-        <tbody>
-          {proveedores.map(p => (
-            <tr key={p.id_proveedor} className="border-b">
-              <td className="p-3">{p.razon_social}</td>
-              <td className="p-3">{p.nit}</td>
-              <td className="p-3">{p.monto_contrato ? `$${Number(p.monto_contrato).toLocaleString()}` : "—"}</td>
-              <td className={`p-3 font-medium ${p.estado === "Pendiente" ? "text-yellow-600" : p.estado === "Aprobado" ? "text-green-600" : "text-red-600"}`}>{p.estado}</td>
-              <td className="p-3">
-                {p.estado === "Pendiente" && (
-                  <>
-                    <button onClick={() => aprobar(p.id_proveedor)} className="mr-3 text-green-600 hover:underline text-xs">Aprobar</button>
-                    <button onClick={() => abrirRechazar(p)} className="text-red-600 hover:underline text-xs">Rechazar</button>
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        data={proveedores}
+        keyExtractor={(r) => r.id_proveedor}
+        emptyMessage="No hay proveedores registrados"
+      />
 
-      {modal === "rechazar" && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h2 className="mb-2 text-lg font-bold">Rechazar proveedor</h2>
-            <p className="mb-3 text-sm text-gray-600">{seleccionado?.razon_social}</p>
-            <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={3} placeholder="Motivo del rechazo (requerido)" className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cancelar</button>
-              <button onClick={rechazar} disabled={!motivo.trim()} className="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50">Rechazar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={modal === "rechazar"}
+        onClose={() => setModal(null)}
+        title="Rechazar proveedor"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button variant="danger" onClick={rechazar} disabled={!motivo.trim()}>Rechazar</Button>
+          </>
+        }
+      >
+        <p className="mb-3 text-sm text-gray-600">{seleccionado?.razon_social}</p>
+        <label className="mb-1 block text-sm font-medium text-text">Motivo del rechazo (requerido)</label>
+        <textarea
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          rows={3}
+          className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+          placeholder="Motivo del rechazo"
+        />
+      </Modal>
     </>
   );
 }
@@ -150,54 +164,62 @@ function TablaClientes() {
     if (res.ok) { setModal(null); cargar(); }
   }
 
+  const columns: Column<Cliente>[] = [
+    { key: "razon_social", header: "Razón Social" },
+    { key: "nit", header: "NIT", render: (r) => r.nit || "—" },
+    { key: "monto_relacion", header: "Monto relación", align: "right", render: (r) => r.monto_relacion ? `$${Number(r.monto_relacion).toLocaleString()}` : "—" },
+    { key: "estado", header: "Estado", render: (r) => <EstadoBadge estado={r.estado} /> },
+    { key: "acciones", header: "Acciones", align: "center", render: (r) => r.estado === "Pendiente" ? (
+      <div className="flex items-center justify-center gap-2">
+        <Button variant="success" size="sm" onClick={() => aprobar(r.id_cliente)}>Aprobar</Button>
+        <Button variant="danger" size="sm" onClick={() => abrirRechazar(r)}>Rechazar</Button>
+      </div>
+    ) : null },
+  ];
+
   return (
     <>
-      <div className="mb-4">
-        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos</option>
-          <option value="Pendiente">Pendientes</option>
-          <option value="Aprobado">Aprobados</option>
-          <option value="Rechazado">Rechazados</option>
-        </select>
+      <div className="mb-4 w-48">
+        <Select
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+          placeholder="Todos"
+          options={[
+            { value: "Pendiente", label: "Pendientes" },
+            { value: "Aprobado", label: "Aprobados" },
+            { value: "Rechazado", label: "Rechazados" },
+          ]}
+        />
       </div>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr><th className="p-3">Razón Social</th><th className="p-3">NIT</th><th className="p-3">Monto relación</th><th className="p-3">Estado</th><th className="p-3">Acciones</th></tr>
-        </thead>
-        <tbody>
-          {clientes.map(c => (
-            <tr key={c.id_cliente} className="border-b">
-              <td className="p-3">{c.razon_social}</td>
-              <td className="p-3">{c.nit || "—"}</td>
-              <td className="p-3">{c.monto_relacion ? `$${Number(c.monto_relacion).toLocaleString()}` : "—"}</td>
-              <td className={`p-3 font-medium ${c.estado === "Pendiente" ? "text-yellow-600" : c.estado === "Aprobado" ? "text-green-600" : "text-red-600"}`}>{c.estado}</td>
-              <td className="p-3">
-                {c.estado === "Pendiente" && (
-                  <>
-                    <button onClick={() => aprobar(c.id_cliente)} className="mr-3 text-green-600 hover:underline text-xs">Aprobar</button>
-                    <button onClick={() => abrirRechazar(c)} className="text-red-600 hover:underline text-xs">Rechazar</button>
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        data={clientes}
+        keyExtractor={(r) => r.id_cliente}
+        emptyMessage="No hay clientes registrados"
+      />
 
-      {modal === "rechazar" && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h2 className="mb-2 text-lg font-bold">Rechazar cliente</h2>
-            <p className="mb-3 text-sm text-gray-600">{seleccionado?.razon_social}</p>
-            <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={3} placeholder="Motivo del rechazo (requerido)" className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cancelar</button>
-              <button onClick={rechazar} disabled={!motivo.trim()} className="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50">Rechazar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={modal === "rechazar"}
+        onClose={() => setModal(null)}
+        title="Rechazar cliente"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button variant="danger" onClick={rechazar} disabled={!motivo.trim()}>Rechazar</Button>
+          </>
+        }
+      >
+        <p className="mb-3 text-sm text-gray-600">{seleccionado?.razon_social}</p>
+        <label className="mb-1 block text-sm font-medium text-text">Motivo del rechazo (requerido)</label>
+        <textarea
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          rows={3}
+          className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+          placeholder="Motivo del rechazo"
+        />
+      </Modal>
     </>
   );
 }

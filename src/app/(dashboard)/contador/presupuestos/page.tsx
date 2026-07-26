@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
+import Input from "@/components/ui/Input";
+import Card from "@/components/ui/Card";
+import Modal from "@/components/ui/Modal";
+import Alert from "@/components/ui/Alert";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import DataTable from "@/components/ui/DataTable";
+import type { Column } from "@/components/ui/DataTable";
 
 interface Presupuesto {
   id_presupuesto: number;
@@ -143,77 +153,69 @@ export default function PresupuestosContadorPage() {
     return categorias.find(c => c.id_categoria === id)?.nombre_categoria || `Cat #${id}`;
   }
 
-  const coloresEstado: Record<string, string> = {
-    Borrador: "text-gray-600",
-    Pendiente: "text-yellow-600",
-    Aprobado: "text-green-600",
-    Rechazado: "text-red-600",
-  };
+  const columns: Column<Presupuesto>[] = [
+    { key: "nombre_area", header: "Área" },
+    { key: "nombre_periodo", header: "Período" },
+    { key: "monto_total_propuesto", header: "Monto propuesto", render: (row) => `$${Number(row.monto_total_propuesto).toLocaleString()}` },
+    { key: "estado", header: "Estado", render: (row) => <EstadoBadge estado={row.estado} /> },
+    { key: "motivo_rechazo", header: "Rechazado por", render: (row) => row.estado === "Rechazado" ? (row.motivo_rechazo || "—") : "—" },
+    { key: "id_presupuesto", header: "Acciones", render: (row) => (
+      <div className="flex gap-2">
+        <Button variant="ghost" size="sm" onClick={() => verDetalle(row)}>Ver</Button>
+        {(row.estado === "Borrador" || row.estado === "Rechazado") && (
+          <Button variant="ghost" size="sm" onClick={() => abrirEditar(row)}>Editar</Button>
+        )}
+      </div>
+    )},
+  ];
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Propuestas de Presupuesto</h1>
-        <button onClick={abrirCrear} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-          + Nueva propuesta
-        </button>
-      </div>
+      <PageHeader
+        title="Propuestas de Presupuesto"
+        actions={<Button variant="primary" size="sm" onClick={abrirCrear}>+ Nueva propuesta</Button>}
+      />
 
       <div className="mb-4 flex gap-4">
-        <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los períodos</option>
-          {periodos.map(p => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre_periodo}</option>)}
-        </select>
-        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los estados</option>
-          <option value="Borrador">Borrador</option>
-          <option value="Pendiente">Pendiente</option>
-          <option value="Aprobado">Aprobado</option>
-          <option value="Rechazado">Rechazado</option>
-        </select>
+        <Select
+          options={[
+            { value: "", label: "Todos los períodos" },
+            ...periodos.map(p => ({ value: String(p.id_periodo), label: p.nombre_periodo })),
+          ]}
+          value={filtroPeriodo}
+          onChange={(e) => setFiltroPeriodo(e.target.value)}
+        />
+        <Select
+          options={[
+            { value: "", label: "Todos los estados" },
+            { value: "Borrador", label: "Borrador" },
+            { value: "Pendiente", label: "Pendiente" },
+            { value: "Aprobado", label: "Aprobado" },
+            { value: "Rechazado", label: "Rechazado" },
+          ]}
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+        />
       </div>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="p-3">Área</th>
-            <th className="p-3">Período</th>
-            <th className="p-3">Monto propuesto</th>
-            <th className="p-3">Estado</th>
-            <th className="p-3">Rechazado por</th>
-            <th className="p-3">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {presupuestos.map(p => (
-            <tr key={p.id_presupuesto} className="border-b">
-              <td className="p-3">{p.nombre_area}</td>
-              <td className="p-3">{p.nombre_periodo}</td>
-              <td className="p-3">${Number(p.monto_total_propuesto).toLocaleString()}</td>
-              <td className={`p-3 font-medium ${coloresEstado[p.estado] || ""}`}>{p.estado}</td>
-              <td className="p-3">{p.estado === "Rechazado" ? (p.motivo_rechazo || "—") : "—"}</td>
-              <td className="flex gap-2 p-3">
-                <button onClick={() => verDetalle(p)} className="text-blue-600 hover:underline text-xs">Ver</button>
-                {(p.estado === "Borrador" || p.estado === "Rechazado") && (
-                  <button onClick={() => abrirEditar(p)} className="text-blue-600 hover:underline text-xs">Editar</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Card>
+        <DataTable columns={columns} data={presupuestos} keyExtractor={(p) => p.id_presupuesto} emptyMessage="No hay presupuestos registrados" />
+      </Card>
 
-      {modal === "detalle" && presupuestoActual && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6">
-            <h2 className="mb-2 text-lg font-bold">Detalle de propuesta</h2>
+      <Modal
+        open={modal === "detalle"}
+        onClose={() => setModal(null)}
+        title="Detalle de propuesta"
+        size="lg"
+        footer={<Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cerrar</Button>}
+      >
+        {presupuestoActual && (
+          <>
             <p className="mb-1 text-sm text-gray-600">Área: {presupuestoActual.nombre_area}</p>
             <p className="mb-1 text-sm text-gray-600">Período: {presupuestoActual.nombre_periodo}</p>
-            <p className="mb-1 text-sm text-gray-600">Estado: <span className={`font-medium ${coloresEstado[presupuestoActual.estado]}`}>{presupuestoActual.estado}</span></p>
+            <p className="mb-1 text-sm text-gray-600">Estado: <EstadoBadge estado={presupuestoActual.estado} /></p>
             {presupuestoActual.estado === "Rechazado" && presupuestoActual.motivo_rechazo && (
-              <div className="mb-3 rounded bg-red-50 p-3 text-sm text-red-700">
-                <strong>Motivo del rechazo:</strong> {presupuestoActual.motivo_rechazo}
-              </div>
+              <Alert variant="error" className="mt-2"><strong>Motivo del rechazo:</strong> {presupuestoActual.motivo_rechazo}</Alert>
             )}
             <table className="mb-4 w-full text-left text-xs">
               <thead className="border-b"><tr><th className="p-2">Categoría</th><th className="p-2">Monto</th></tr></thead>
@@ -223,56 +225,68 @@ export default function PresupuestosContadorPage() {
                 ))}
               </tbody>
             </table>
-            <p className="mb-4 text-sm font-medium">Total: ${Number(presupuestoActual.monto_total_propuesto).toLocaleString()}</p>
-            <button onClick={() => setModal(null)} className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm">Cerrar</button>
+            <p className="text-sm font-medium">Total: ${Number(presupuestoActual.monto_total_propuesto).toLocaleString()}</p>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        open={modal === "crear" || modal === "editar"}
+        onClose={() => setModal(null)}
+        title={modal === "crear" ? "Nueva propuesta" : "Editar propuesta"}
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button variant="secondary" size="sm" onClick={() => guardar(false)} disabled={formPartidas.length === 0}>Guardar borrador</Button>
+            <Button variant="primary" size="sm" onClick={() => guardar(true)} disabled={formPartidas.length === 0 || !formArea || !formPeriodo}>Enviar a aprobación</Button>
+          </>
+        }
+      >
+        <div className="mb-3 flex gap-3">
+          <Select
+            options={[
+              { value: "", label: "Seleccionar área" },
+              ...areas.map(a => ({ value: String(a.id_area), label: a.nombre_area })),
+            ]}
+            value={formArea}
+            onChange={(e) => setFormArea(e.target.value)}
+          />
+          <Select
+            options={[
+              { value: "", label: "Seleccionar período" },
+              ...periodos.filter(p => p.estado === "Abierto").map(p => ({ value: String(p.id_periodo), label: p.nombre_periodo })),
+            ]}
+            value={formPeriodo}
+            onChange={(e) => setFormPeriodo(e.target.value)}
+          />
+        </div>
+
+        <div className="mb-4">
+          <h3 className="mb-2 text-sm font-medium text-gray-700">Partidas presupuestarias</h3>
+          {formPartidas.map((pp, i) => (
+            <div key={i} className="mb-2 flex items-center gap-2">
+              <span className="flex-1 text-sm">{nombreCategoria(pp.id_categoria)}</span>
+              <Input type="number" value={String(pp.monto_asignado)} onChange={(e) => actualizarMonto(i, e.target.value)} className="w-32" />
+              <Button variant="ghost" size="sm" onClick={() => eliminarPartida(i)}>Quitar</Button>
+            </div>
+          ))}
+          <div className="mt-2 flex gap-2">
+            <Select
+              options={[
+                { value: "", label: "Categoría" },
+                ...categorias.map(c => ({ value: String(c.id_categoria), label: `${c.nombre_categoria} (${c.tipo})` })),
+              ]}
+              value={nuevaCat}
+              onChange={(e) => setNuevaCat(e.target.value)}
+            />
+            <Input type="number" placeholder="Monto" value={nuevoMonto} onChange={(e) => setNuevoMonto(e.target.value)} className="w-32" />
+            <Button variant="secondary" size="sm" onClick={agregarPartida}>Agregar</Button>
           </div>
         </div>
-      )}
 
-      {(modal === "crear" || modal === "editar") && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold">{modal === "crear" ? "Nueva propuesta" : "Editar propuesta"}</h2>
-            <div className="mb-3 flex gap-3">
-              <select value={formArea} onChange={(e) => setFormArea(e.target.value)} className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm">
-                <option value="">Seleccionar área</option>
-                {areas.map(a => <option key={a.id_area} value={a.id_area}>{a.nombre_area}</option>)}
-              </select>
-              <select value={formPeriodo} onChange={(e) => setFormPeriodo(e.target.value)} disabled={modal === "editar"} className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100">
-                <option value="">Seleccionar período</option>
-                {periodos.filter(p => p.estado === "Abierto").map(p => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre_periodo}</option>)}
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <h3 className="mb-2 text-sm font-medium text-gray-700">Partidas presupuestarias</h3>
-              {formPartidas.map((pp, i) => (
-                <div key={i} className="mb-2 flex items-center gap-2">
-                  <span className="flex-1 text-sm">{nombreCategoria(pp.id_categoria)}</span>
-                  <input type="number" value={pp.monto_asignado} onChange={(e) => actualizarMonto(i, e.target.value)} className="w-32 rounded-md border border-gray-300 px-2 py-1 text-sm" />
-                  <button onClick={() => eliminarPartida(i)} className="text-red-600 hover:underline text-xs">Quitar</button>
-                </div>
-              ))}
-              <div className="mt-2 flex gap-2">
-                <select value={nuevaCat} onChange={(e) => setNuevaCat(e.target.value)} className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm">
-                  <option value="">Categoría</option>
-                  {categorias.map(c => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre_categoria} ({c.tipo})</option>)}
-                </select>
-                <input type="number" placeholder="Monto" value={nuevoMonto} onChange={(e) => setNuevoMonto(e.target.value)} className="w-32 rounded-md border border-gray-300 px-3 py-2 text-sm" />
-                <button onClick={agregarPartida} className="rounded-md bg-gray-200 px-3 py-2 text-sm hover:bg-gray-300">Agregar</button>
-              </div>
-            </div>
-
-            <p className="mb-4 text-sm font-medium">Total propuesto: ${totalPropuesto.toLocaleString()}</p>
-
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cancelar</button>
-              <button onClick={() => guardar(false)} disabled={formPartidas.length === 0} className="rounded-md border border-gray-300 px-4 py-2 text-sm disabled:opacity-50">Guardar borrador</button>
-              <button onClick={() => guardar(true)} disabled={formPartidas.length === 0 || !formArea || !formPeriodo} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">Enviar a aprobación</button>
-            </div>
-          </div>
-        </div>
-      )}
+        <p className="text-sm font-medium">Total propuesto: ${totalPropuesto.toLocaleString()}</p>
+      </Modal>
     </div>
   );
 }

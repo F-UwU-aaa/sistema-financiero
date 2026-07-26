@@ -2,6 +2,16 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { Cliente } from "@/types";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
+import Input from "@/components/ui/Input";
+import Card from "@/components/ui/Card";
+import Modal from "@/components/ui/Modal";
+import Alert from "@/components/ui/Alert";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import DataTable from "@/components/ui/DataTable";
+import type { Column } from "@/components/ui/DataTable";
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -48,65 +58,66 @@ export default function ClientesPage() {
     setModal(null); cargar();
   }
 
-  const colores: Record<string, string> = { Pendiente: "text-yellow-600", Aprobado: "text-green-600", Rechazado: "text-red-600" };
+  const columns: Column<Cliente>[] = [
+    { key: "razon_social", header: "Razón Social" },
+    { key: "nit", header: "NIT", render: (row) => row.nit || "—" },
+    { key: "contacto", header: "Contacto", render: (row) => row.contacto || "—" },
+    { key: "monto_relacion", header: "Monto relación", render: (row) => row.monto_relacion ? `$${Number(row.monto_relacion).toLocaleString()}` : "—" },
+    { key: "estado", header: "Estado", render: (row) => <EstadoBadge estado={row.estado} /> },
+    { key: "id_cliente", header: "Acciones", render: (row) => (
+      (row.estado === "Pendiente" || row.estado === "Rechazado") ? (
+        <Button variant="ghost" size="sm" onClick={() => abrirEditar(row)}>Editar</Button>
+      ) : null
+    )},
+  ];
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-        <button onClick={abrirCrear} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">+ Nuevo cliente</button>
+      <PageHeader
+        title="Clientes"
+        actions={<Button variant="primary" size="sm" onClick={abrirCrear}>+ Nuevo cliente</Button>}
+      />
+
+      <div className="mb-4">
+        <Select
+          options={[
+            { value: "", label: "Todos los estados" },
+            { value: "Pendiente", label: "Pendiente" },
+            { value: "Aprobado", label: "Aprobado" },
+            { value: "Rechazado", label: "Rechazado" },
+          ]}
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+        />
       </div>
 
-      <div className="mb-4 flex gap-4">
-        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los estados</option>
-          <option value="Pendiente">Pendiente</option>
-          <option value="Aprobado">Aprobado</option>
-          <option value="Rechazado">Rechazado</option>
-        </select>
-      </div>
+      <Card>
+        <DataTable columns={columns} data={clientes} keyExtractor={(c) => c.id_cliente} emptyMessage="No hay clientes registrados" />
+      </Card>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr><th className="p-3">Razón Social</th><th className="p-3">NIT</th><th className="p-3">Contacto</th><th className="p-3">Monto relación</th><th className="p-3">Estado</th><th className="p-3">Acciones</th></tr>
-        </thead>
-        <tbody>
-          {clientes.map(c => (
-            <tr key={c.id_cliente} className="border-b">
-              <td className="p-3">{c.razon_social}</td>
-              <td className="p-3">{c.nit || "—"}</td>
-              <td className="p-3">{c.contacto || "—"}</td>
-              <td className="p-3">{c.monto_relacion ? `$${Number(c.monto_relacion).toLocaleString()}` : "—"}</td>
-              <td className={`p-3 font-medium ${colores[c.estado] || ""}`}>{c.estado}</td>
-              <td className="p-3">
-                {(c.estado === "Pendiente" || c.estado === "Rechazado") && (
-                  <button onClick={() => abrirEditar(c)} className="text-blue-600 hover:underline text-xs">Editar</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {(modal === "crear" || modal === "editar") && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold">{modal === "crear" ? "Nuevo cliente" : "Editar cliente"}</h2>
-            {error && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
-            <div className="grid grid-cols-2 gap-3">
-              <input placeholder="Razón social *" value={form.razon_social} onChange={e => setForm({ ...form, razon_social: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
-              <input placeholder="NIT" value={form.nit} onChange={e => setForm({ ...form, nit: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
-              <input placeholder="Contacto" value={form.contacto} onChange={e => setForm({ ...form, contacto: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
-              <input placeholder="Monto relación comercial" type="number" value={form.monto_relacion} onChange={e => setForm({ ...form, monto_relacion: e.target.value })} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            </div>
-            <textarea placeholder="Datos de facturación" value={form.datos_facturacion} onChange={e => setForm({ ...form, datos_facturacion: e.target.value })} className="mt-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" rows={2} />
-            <div className="mt-4 flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cancelar</button>
-              <button onClick={guardar} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">Guardar</button>
-            </div>
-          </div>
+      <Modal
+        open={modal === "crear" || modal === "editar"}
+        onClose={() => setModal(null)}
+        title={modal === "crear" ? "Nuevo cliente" : "Editar cliente"}
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button variant="primary" size="sm" onClick={guardar}>Guardar</Button>
+          </>
+        }
+      >
+        {error && <Alert variant="error">{error}</Alert>}
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Razón social *" value={form.razon_social} onChange={e => setForm({ ...form, razon_social: e.target.value })} placeholder="Razón social" />
+          <Input label="NIT" value={form.nit} onChange={e => setForm({ ...form, nit: e.target.value })} placeholder="NIT" />
+          <Input label="Contacto" value={form.contacto} onChange={e => setForm({ ...form, contacto: e.target.value })} placeholder="Contacto" />
+          <Input label="Monto relación comercial" type="number" value={form.monto_relacion} onChange={e => setForm({ ...form, monto_relacion: e.target.value })} placeholder="Monto relación" />
         </div>
-      )}
+        <div className="mt-3">
+          <label className="mb-1 block text-sm font-medium text-gray-700">Datos de facturación</label>
+          <textarea placeholder="Datos de facturación" value={form.datos_facturacion} onChange={e => setForm({ ...form, datos_facturacion: e.target.value })} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" rows={2} />
+        </div>
+      </Modal>
     </div>
   );
 }

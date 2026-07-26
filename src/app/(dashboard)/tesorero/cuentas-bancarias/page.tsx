@@ -2,6 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { CuentaBancaria } from "@/types";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Modal from "@/components/ui/Modal";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Alert from "@/components/ui/Alert";
+import Badge from "@/components/ui/Badge";
+import DataTable, { type Column } from "@/components/ui/DataTable";
 
 export default function CuentasBancariasPage() {
   const [cuentas, setCuentas] = useState<CuentaBancaria[]>([]);
@@ -45,52 +53,80 @@ export default function CuentasBancariasPage() {
     setModal(null); cargar();
   }
 
+  const columns: Column<CuentaBancaria>[] = [
+    { key: "nombre_cuenta", header: "Nombre" },
+    { key: "tipo", header: "Tipo" },
+    { key: "numero_cuenta", header: "N° Cuenta", render: (r) => r.numero_cuenta || "—" },
+    { key: "saldo_actual", header: "Saldo", render: (r) => `$${Number(r.saldo_actual).toLocaleString()}` },
+    { key: "activo", header: "Estado", render: (r) => (
+      <Badge variant={r.activo ? "success" : "danger"}>{r.activo ? "Activa" : "Inactiva"}</Badge>
+    )},
+    { key: "acciones", header: "Acciones", render: (r) => (
+      <Button variant="ghost" size="sm" onClick={() => abrirEditar(r)}>Editar</Button>
+    )},
+  ];
+
+  const tipoOptions = [
+    { value: "Banco", label: "Banco" },
+    { value: "Caja", label: "Caja" },
+  ];
+
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Cuentas Bancarias / Caja</h1>
-        <button onClick={abrirCrear} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">+ Nueva cuenta</button>
-      </div>
+      <PageHeader
+        title="Cuentas Bancarias / Caja"
+        actions={<Button onClick={abrirCrear}>+ Nueva cuenta</Button>}
+      />
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr><th className="p-3">Nombre</th><th className="p-3">Tipo</th><th className="p-3">N° Cuenta</th><th className="p-3">Saldo</th><th className="p-3">Estado</th><th className="p-3">Acciones</th></tr>
-        </thead>
-        <tbody>
-          {cuentas.map(c => (
-            <tr key={c.id_cuenta_bancaria} className="border-b">
-              <td className="p-3">{c.nombre_cuenta}</td>
-              <td className="p-3">{c.tipo}</td>
-              <td className="p-3">{c.numero_cuenta || "—"}</td>
-              <td className="p-3">${Number(c.saldo_actual).toLocaleString()}</td>
-              <td className="p-3"><span className={c.activo ? "text-green-600" : "text-red-600"}>{c.activo ? "Activa" : "Inactiva"}</span></td>
-              <td className="p-3"><button onClick={() => abrirEditar(c)} className="text-blue-600 hover:underline text-xs">Editar</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable<CuentaBancaria>
+        columns={columns}
+        data={cuentas}
+        keyExtractor={(c) => c.id_cuenta_bancaria}
+        emptyMessage="No hay cuentas registradas"
+      />
 
-      {(modal === "crear" || modal === "editar") && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold">{modal === "crear" ? "Nueva cuenta" : "Editar cuenta"}</h2>
-            {error && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
-            <input placeholder="Nombre" value={form.nombre_cuenta} onChange={e => setForm({ ...form, nombre_cuenta: e.target.value })} className="mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} className="mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-              <option value="Banco">Banco</option>
-              <option value="Caja">Caja</option>
-            </select>
-            <input placeholder="Número de cuenta" value={form.numero_cuenta} onChange={e => setForm({ ...form, numero_cuenta: e.target.value })} className="mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            {modal === "crear" && (
-              <input placeholder="Saldo inicial" type="number" value={form.saldo_inicial} onChange={e => setForm({ ...form, saldo_inicial: e.target.value })} className="mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            )}
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm">Cancelar</button>
-              <button onClick={guardar} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">Guardar</button>
-            </div>
-          </div>
+      <Modal
+        open={modal === "crear" || modal === "editar"}
+        onClose={() => setModal(null)}
+        title={modal === "crear" ? "Nueva cuenta" : "Editar cuenta"}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModal(null)}>Cancelar</Button>
+            <Button onClick={guardar}>Guardar</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {error && <Alert variant="error">{error}</Alert>}
+          <Input
+            label="Nombre"
+            placeholder="Nombre"
+            value={form.nombre_cuenta}
+            onChange={e => setForm({ ...form, nombre_cuenta: e.target.value })}
+          />
+          <Select
+            label="Tipo"
+            options={tipoOptions}
+            value={form.tipo}
+            onChange={e => setForm({ ...form, tipo: e.target.value })}
+          />
+          <Input
+            label="Número de cuenta"
+            placeholder="Número de cuenta"
+            value={form.numero_cuenta}
+            onChange={e => setForm({ ...form, numero_cuenta: e.target.value })}
+          />
+          {modal === "crear" && (
+            <Input
+              label="Saldo inicial"
+              type="number"
+              placeholder="Saldo inicial"
+              value={form.saldo_inicial}
+              onChange={e => setForm({ ...form, saldo_inicial: e.target.value })}
+            />
+          )}
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

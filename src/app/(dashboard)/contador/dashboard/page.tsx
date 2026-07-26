@@ -2,6 +2,15 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { exportarCSV, exportarPDF } from "@/lib/export";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import KpiCard from "@/components/ui/KpiCard";
+import Card, { CardHeader } from "@/components/ui/Card";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import DataTable from "@/components/ui/DataTable";
+import Alert from "@/components/ui/Alert";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Banknote } from "lucide-react";
+import type { Column } from "@/components/ui/DataTable";
 
 interface CategoriaEjecucion {
   nombre_categoria: string;
@@ -30,202 +39,117 @@ export default function DashboardContadorPage() {
   useEffect(() => { cargar(); }, [cargar]);
 
   if (cargando) return <div className="p-6 text-gray-500">Cargando...</div>;
-  if (!datos) return <div className="p-6 text-red-500">Error al cargar datos</div>;
+  if (!datos) return <div className="p-6"><Alert variant="error">Error al cargar datos</Alert></div>;
 
   const flujoTotal = datos.flujo_caja.reduce((s: number, f: FlujoCaja) => s + f.saldo, 0);
 
+  const flujoColumns: Column<FlujoCaja>[] = [
+    { key: "nombre_cuenta", header: "Cuenta" },
+    { key: "saldo", header: "Saldo", align: "right", className: "font-medium", render: (row) => `$${row.saldo.toLocaleString()}` },
+    { key: "pagos_mes", header: "Pagos (mes)", align: "right", className: "text-red-600", render: (row) => `-$${row.pagos_mes.toLocaleString()}` },
+    { key: "cobros_mes", header: "Cobros (mes)", align: "right", className: "text-green-600", render: (row) => `+$${row.cobros_mes.toLocaleString()}` },
+  ];
+
+  const ejecucionColumns: Column<CategoriaEjecucion>[] = [
+    { key: "nombre_categoria", header: "Categoría" },
+    { key: "tipo", header: "Tipo", render: (row) => <span className={row.tipo === "Ingreso" ? "rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800" : "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800"}>{row.tipo}</span> },
+    { key: "asignado", header: "Asignado", align: "right", render: (row) => `$${row.asignado.toLocaleString()}` },
+    { key: "ejecutado", header: "Ejecutado", align: "right", render: (row) => `$${row.ejecutado.toLocaleString()}` },
+  ];
+
+  const solicitudesColumns: Column<any>[] = [
+    { key: "estado", header: "Estado", render: (row) => <EstadoBadge estado={row.estado} /> },
+    { key: "cantidad", header: "Cantidad", align: "right" },
+    { key: "total", header: "Total", align: "right", render: (row) => `$${row.total.toLocaleString()}` },
+  ];
+
+  const facturasColumns: Column<any>[] = [
+    { key: "tipo", header: "Tipo" },
+    { key: "estado", header: "Estado", render: (row) => <EstadoBadge estado={row.estado} /> },
+    { key: "cantidad", header: "Cantidad", align: "right" },
+    { key: "total", header: "Total", align: "right", render: (row) => `$${row.total.toLocaleString()}` },
+  ];
+
+  const totalPagos = datos.flujo_caja.reduce((s: number, f: FlujoCaja) => s + f.pagos_mes, 0);
+  const totalCobros = datos.flujo_caja.reduce((s: number, f: FlujoCaja) => s + f.cobros_mes, 0);
+
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Contable</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => exportarCSV("dashboard_contador.csv", ["Concepto", "Monto"], [
+      <PageHeader
+        title="Dashboard Contable"
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => exportarCSV("dashboard_contador.csv", ["Concepto", "Monto"], [
               ["Cuentas por pagar", datos.cuentas_por_pagar],
               ["Cuentas por cobrar", datos.cuentas_por_cobrar],
               ["Flujo de caja total", flujoTotal],
               ["Pagos este mes", datos.pagos_mes.total],
               ["Cobros este mes", datos.cobros_mes.total],
-            ])}
-            className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-          >CSV</button>
-          <button
-            onClick={() => exportarPDF("Dashboard Contable", ["Concepto", "Monto"], [
+            ])}>CSV</Button>
+            <Button variant="danger" size="sm" onClick={() => exportarPDF("Dashboard Contable", ["Concepto", "Monto"], [
               ["Cuentas por pagar", datos.cuentas_por_pagar],
               ["Cuentas por cobrar", datos.cuentas_por_cobrar],
               ["Flujo de caja total", flujoTotal],
               ["Pagos este mes", datos.pagos_mes.total],
               ["Cobros este mes", datos.cobros_mes.total],
-            ])}
-            className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
-          >PDF</button>
-        </div>
-      </div>
+            ])}>PDF</Button>
+          </>
+        }
+      />
 
-      {/* KPIs */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Cuentas por pagar</div>
-          <div className="mt-1 text-xl font-bold text-red-600">${datos.cuentas_por_pagar.toLocaleString()}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Cuentas por cobrar</div>
-          <div className="mt-1 text-xl font-bold text-green-600">${datos.cuentas_por_cobrar.toLocaleString()}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Flujo de caja total</div>
-          <div className="mt-1 text-xl font-bold text-blue-600">${flujoTotal.toLocaleString()}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Pagos este mes</div>
-          <div className="mt-1 text-xl font-bold">{datos.pagos_mes.cantidad}</div>
-          <div className="text-xs text-gray-400">${datos.pagos_mes.total.toLocaleString()}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Cobros este mes</div>
-          <div className="mt-1 text-xl font-bold">{datos.cobros_mes.cantidad}</div>
-          <div className="text-xs text-gray-400">${datos.cobros_mes.total.toLocaleString()}</div>
-        </div>
+        <KpiCard label="Cuentas por pagar" value={`$${datos.cuentas_por_pagar.toLocaleString()}`} icon={<TrendingDown size={20} />} color="danger" />
+        <KpiCard label="Cuentas por cobrar" value={`$${datos.cuentas_por_cobrar.toLocaleString()}`} icon={<TrendingUp size={20} />} color="success" />
+        <KpiCard label="Flujo de caja total" value={`$${flujoTotal.toLocaleString()}`} icon={<DollarSign size={20} />} color="primary" />
+        <KpiCard label="Pagos este mes" value={String(datos.pagos_mes.cantidad)} subtext={`$${datos.pagos_mes.total.toLocaleString()}`} icon={<CreditCard size={20} />} color="warning" />
+        <KpiCard label="Cobros este mes" value={String(datos.cobros_mes.cantidad)} subtext={`$${datos.cobros_mes.total.toLocaleString()}`} icon={<Banknote size={20} />} color="info" />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Flujo de caja por cuenta */}
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Flujo de Caja por Cuenta</h2>
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50">
-              <tr>
-                <th className="p-3">Cuenta</th>
-                <th className="p-3 text-right">Saldo</th>
-                <th className="p-3 text-right">Pagos (mes)</th>
-                <th className="p-3 text-right">Cobros (mes)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {datos.flujo_caja.map((f: FlujoCaja) => (
-                <tr key={f.nombre_cuenta} className="border-b">
-                  <td className="p-3">{f.nombre_cuenta}</td>
-                  <td className="p-3 text-right font-medium">${f.saldo.toLocaleString()}</td>
-                  <td className="p-3 text-right text-red-600">-${f.pagos_mes.toLocaleString()}</td>
-                  <td className="p-3 text-right text-green-600">+${f.cobros_mes.toLocaleString()}</td>
-                </tr>
-              ))}
-              <tr className="bg-gray-50 font-semibold">
-                <td className="p-3">Total</td>
-                <td className="p-3 text-right">${flujoTotal.toLocaleString()}</td>
-                <td className="p-3 text-right text-red-600">
-                  -${datos.flujo_caja.reduce((s: number, f: FlujoCaja) => s + f.pagos_mes, 0).toLocaleString()}
-                </td>
-                <td className="p-3 text-right text-green-600">
-                  +${datos.flujo_caja.reduce((s: number, f: FlujoCaja) => s + f.cobros_mes, 0).toLocaleString()}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <Card>
+          <CardHeader>Flujo de Caja por Cuenta</CardHeader>
+          <DataTable columns={flujoColumns} data={datos.flujo_caja} keyExtractor={(f) => f.nombre_cuenta} />
+        </Card>
 
-        {/* Ejecución por categoría */}
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Ejecución por Categoría</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => exportarCSV("ejecucion_categorias.csv",
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <span>Ejecución por Categoría</span>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => exportarCSV("ejecucion_categorias.csv",
                   ["Categoría", "Tipo", "Asignado", "Ejecutado"],
                   datos.ejecucion_presupuestaria.map((e: CategoriaEjecucion) =>
                     [e.nombre_categoria, e.tipo, e.asignado, e.ejecutado]
                   )
-                )}
-                className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
-              >CSV</button>
-              <button
-                onClick={() => exportarPDF("Ejecución por Categoría",
+                )}>CSV</Button>
+                <Button variant="danger" size="sm" onClick={() => exportarPDF("Ejecución por Categoría",
                   ["Categoría", "Tipo", "Asignado", "Ejecutado"],
                   datos.ejecucion_presupuestaria.map((e: CategoriaEjecucion) =>
                     [e.nombre_categoria, e.tipo, e.asignado, e.ejecutado]
                   ), { orientacion: "landscape" }
-                )}
-                className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
-              >PDF</button>
+                )}>PDF</Button>
+              </div>
             </div>
-          </div>
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50">
-              <tr>
-                <th className="p-3">Categoría</th>
-                <th className="p-3">Tipo</th>
-                <th className="p-3 text-right">Asignado</th>
-                <th className="p-3 text-right">Ejecutado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {datos.ejecucion_presupuestaria.map((e: CategoriaEjecucion) => (
-                <tr key={e.nombre_categoria} className="border-b">
-                  <td className="p-3">{e.nombre_categoria}</td>
-                  <td className="p-3">
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      e.tipo === "Ingreso" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                    }`}>{e.tipo}</span>
-                  </td>
-                  <td className="p-3 text-right">${e.asignado.toLocaleString()}</td>
-                  <td className="p-3 text-right">${e.ejecutado.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          </CardHeader>
+          <DataTable columns={ejecucionColumns} data={datos.ejecucion_presupuestaria} keyExtractor={(e) => e.nombre_categoria} />
+        </Card>
       </div>
 
-      {/* Solicitudes y Facturas por estado */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Solicitudes de Pago por Estado</h2>
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50">
-              <tr><th className="p-3">Estado</th><th className="p-3 text-right">Cantidad</th><th className="p-3 text-right">Total</th></tr>
-            </thead>
-            <tbody>
-              {datos.solicitudes_por_estado.map((s: any) => (
-                <tr key={s.estado} className="border-b">
-                  <td className="p-3">
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      s.estado === "Pendiente" ? "bg-yellow-100 text-yellow-800" :
-                      s.estado === "Aprobada" ? "bg-green-100 text-green-800" :
-                      s.estado === "Ejecutada" ? "bg-blue-100 text-blue-800" :
-                      "bg-gray-100 text-gray-800"
-                    }`}>{s.estado}</span>
-                  </td>
-                  <td className="p-3 text-right">{s.cantidad}</td>
-                  <td className="p-3 text-right">${s.total.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Card>
+          <CardHeader>Solicitudes de Pago por Estado</CardHeader>
+          <DataTable columns={solicitudesColumns} data={datos.solicitudes_por_estado} keyExtractor={(s) => s.estado} />
+        </Card>
 
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Facturas por Tipo/Estado</h2>
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50">
-              <tr><th className="p-3">Tipo</th><th className="p-3">Estado</th><th className="p-3 text-right">Cantidad</th><th className="p-3 text-right">Total</th></tr>
-            </thead>
-            <tbody>
-              {datos.facturas_por_estado.map((f: any, i: number) => (
-                <tr key={i} className="border-b">
-                  <td className="p-3">{f.tipo}</td>
-                  <td className="p-3">{f.estado}</td>
-                  <td className="p-3 text-right">{f.cantidad}</td>
-                  <td className="p-3 text-right">${f.total.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Card>
+          <CardHeader>Facturas por Tipo/Estado</CardHeader>
+          <DataTable columns={facturasColumns} data={datos.facturas_por_estado} keyExtractor={(_f, i) => String(i)} />
+        </Card>
       </div>
 
-      <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+      <Alert variant="warning">
         <strong>Nota:</strong> Los reportes de libro diario, libro mayor y balance de comprobación no están disponibles porque la tabla de asientos contables no tiene datos reales. Pendiente de implementar con el módulo de contabilidad general.
-      </div>
+      </Alert>
     </div>
   );
 }

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import Select from "@/components/ui/Select";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import EstadoBadge from "@/components/ui/EstadoBadge";
 
 interface InformeRow {
   id_referencia: number;
@@ -55,67 +59,77 @@ export default function InformeAuditoriaPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  const columns: Column<InformeRow>[] = [
+    { key: "modulo", header: "Módulo" },
+    { key: "tipo_transaccion", header: "Tipo", render: (row) => row.tipo_transaccion || "-" },
+    { key: "descripcion", header: "Descripción", className: "max-w-xs truncate" },
+    {
+      key: "monto",
+      header: "Monto",
+      align: "right",
+      render: (row) => row.monto ? `$${Number(row.monto).toLocaleString()}` : "-",
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      render: (row) => <EstadoBadge estado={row.estado} />,
+    },
+    { key: "nombre_registra", header: "Registró" },
+    { key: "nombre_aprueba", header: "Aprobó", render: (row) => row.nombre_aprueba || "-" },
+    { key: "nombre_ejecuta", header: "Ejecutó", render: (row) => row.nombre_ejecuta || "-" },
+    {
+      key: "fecha",
+      header: "Fecha",
+      className: "text-xs text-text-muted",
+      render: (row) => row.fecha?.split("T")[0],
+    },
+  ];
+
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Informe de Auditoría</h1>
+      <PageHeader title="Informe de Auditoría" />
 
       <div className="mb-4 flex flex-wrap gap-3">
-        <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los periodos</option>
-          {periodos.map((p) => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre_periodo}</option>)}
-        </select>
-        <select value={filtroUsuario} onChange={(e) => setFiltroUsuario(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los usuarios</option>
-          {usuarios.map((u) => <option key={u.id_usuario} value={u.id_usuario}>{u.nombre_completo}</option>)}
-        </select>
-        <select value={filtroModulo} onChange={(e) => setFiltroModulo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los módulos</option>
-          {MODULOS.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los tipos</option>
-          <option value="Compra">Compra</option>
-          <option value="Venta">Venta</option>
-          <option value="Transferencia">Transferencia</option>
-          <option value="Cheque">Cheque</option>
-          <option value="Efectivo">Efectivo</option>
-        </select>
+        <Select
+          options={periodos.map((p) => ({ value: p.id_periodo, label: p.nombre_periodo }))}
+          value={filtroPeriodo}
+          onChange={(e) => setFiltroPeriodo(e.target.value)}
+          placeholder="Todos los periodos"
+        />
+        <Select
+          options={usuarios.map((u) => ({ value: u.id_usuario, label: u.nombre_completo }))}
+          value={filtroUsuario}
+          onChange={(e) => setFiltroUsuario(e.target.value)}
+          placeholder="Todos los usuarios"
+        />
+        <Select
+          options={MODULOS.map((m) => ({ value: m, label: m }))}
+          value={filtroModulo}
+          onChange={(e) => setFiltroModulo(e.target.value)}
+          placeholder="Todos los módulos"
+        />
+        <Select
+          options={[
+            { value: "Compra", label: "Compra" },
+            { value: "Venta", label: "Venta" },
+            { value: "Transferencia", label: "Transferencia" },
+            { value: "Cheque", label: "Cheque" },
+            { value: "Efectivo", label: "Efectivo" },
+          ]}
+          value={filtroTipo}
+          onChange={(e) => setFiltroTipo(e.target.value)}
+          placeholder="Todos los tipos"
+        />
       </div>
 
-      <div className="mb-3 text-sm text-gray-500">{informe.length} registros encontrados</div>
+      <div className="mb-3 text-sm text-text-secondary">{informe.length} registros encontrados</div>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="p-3">Módulo</th>
-            <th className="p-3">Tipo</th>
-            <th className="p-3">Descripción</th>
-            <th className="p-3">Monto</th>
-            <th className="p-3">Estado</th>
-            <th className="p-3">Registró</th>
-            <th className="p-3">Aprobó</th>
-            <th className="p-3">Ejecutó</th>
-            <th className="p-3">Fecha</th>
-          </tr>
-        </thead>
-        <tbody>
-          {informe.length === 0 ? (
-            <tr><td colSpan={9} className="p-3 text-center text-gray-400">Sin resultados</td></tr>
-          ) : informe.map((r, i) => (
-            <tr key={`${r.modulo}-${r.id_referencia}-${i}`} className="border-b">
-              <td className="p-3">{r.modulo}</td>
-              <td className="p-3">{r.tipo_transaccion || "-"}</td>
-              <td className="p-3 max-w-xs truncate">{r.descripcion}</td>
-              <td className="p-3">{r.monto ? `$${Number(r.monto).toLocaleString()}` : "-"}</td>
-              <td className="p-3">{r.estado}</td>
-              <td className="p-3">{r.nombre_registra}</td>
-              <td className="p-3">{r.nombre_aprueba || "-"}</td>
-              <td className="p-3">{r.nombre_ejecuta || "-"}</td>
-              <td className="p-3 text-xs text-gray-500">{r.fecha?.split("T")[0]}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        data={informe}
+        keyExtractor={(r, i) => `${r.modulo}-${r.id_referencia}-${i}`}
+        emptyMessage="Sin resultados"
+      />
     </div>
   );
 }

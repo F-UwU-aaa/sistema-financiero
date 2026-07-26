@@ -2,6 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { exportarCSV, exportarPDF } from "@/lib/export";
+import { DollarSign, TrendingUp, Clock, ArrowDownLeft } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Card, { CardHeader } from "@/components/ui/Card";
+import KpiCard from "@/components/ui/KpiCard";
+import Badge from "@/components/ui/Badge";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface Cuenta {
   id_cuenta_bancaria: number;
@@ -21,6 +29,29 @@ interface Pago {
   numero_factura: string | null;
 }
 
+const cuentaColumns: Column<Cuenta>[] = [
+  { key: "nombre_cuenta", header: "Cuenta" },
+  { key: "tipo", header: "Tipo", render: (row) => (
+    <Badge variant={row.tipo === "Banco" ? "info" : "success"}>{row.tipo}</Badge>
+  )},
+  { key: "numero_cuenta", header: "N Cuenta", render: (row) => row.numero_cuenta || "-" },
+  { key: "saldo_actual", header: "Saldo", align: "right", render: (row) => (
+    <span className="font-medium">${row.saldo_actual.toLocaleString()}</span>
+  )},
+];
+
+const pagoColumns: Column<Pago>[] = [
+  { key: "id_pago", header: "ID", render: (row) => `#${row.id_pago}` },
+  { key: "monto", header: "Monto", align: "right", render: (row) => (
+    <span className="font-medium">${row.monto.toLocaleString()}</span>
+  )},
+  { key: "metodo", header: "Metodo" },
+  { key: "numero_operacion", header: "N Operacion", render: (row) => row.numero_operacion || "-" },
+  { key: "fecha_pago", header: "Fecha", render: (row) => row.fecha_pago?.split("T")[0] },
+  { key: "razon_social", header: "Proveedor", render: (row) => row.razon_social || "-" },
+  { key: "numero_factura", header: "Factura", render: (row) => row.numero_factura || "-" },
+];
+
 export default function DashboardTesoreroPage() {
   const [datos, setDatos] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
@@ -38,132 +69,84 @@ export default function DashboardTesoreroPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard de Caja y Bancos</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => exportarCSV("saldos_cuentas.csv",
+      <PageHeader
+        title="Dashboard de Caja y Bancos"
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => exportarCSV("saldos_cuentas.csv",
               ["Cuenta", "Tipo", "N Cuenta", "Saldo"],
               datos.cuentas.map((c: Cuenta) => [c.nombre_cuenta, c.tipo, c.numero_cuenta || "", c.saldo_actual])
-            )}
-            className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-          >CSV</button>
-          <button
-            onClick={() => exportarPDF("Saldos por Cuenta",
+            )}>CSV</Button>
+            <Button variant="danger" size="sm" onClick={() => exportarPDF("Saldos por Cuenta",
               ["Cuenta", "Tipo", "N Cuenta", "Saldo"],
               datos.cuentas.map((c: Cuenta) => [c.nombre_cuenta, c.tipo, c.numero_cuenta || "", c.saldo_actual])
-            )}
-            className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
-          >PDF</button>
-        </div>
-      </div>
+            )}>PDF</Button>
+          </>
+        }
+      />
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Saldo total</div>
-          <div className="mt-1 text-2xl font-bold text-blue-600">${datos.saldo_total.toLocaleString()}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Pagos ejecutados (mes)</div>
-          <div className="mt-1 text-2xl font-bold">{datos.pagos_mes.cantidad}</div>
-          <div className="text-xs text-gray-400">${datos.pagos_mes.total.toLocaleString()}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Pagos pendientes</div>
-          <div className="mt-1 text-2xl font-bold text-orange-600">{datos.pagos_pendientes.cantidad}</div>
-          <div className="text-xs text-gray-400">${datos.pagos_pendientes.total.toLocaleString()}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">Cobros este mes</div>
-          <div className="mt-1 text-2xl font-bold text-green-600">{datos.cobros_mes.cantidad}</div>
-          <div className="text-xs text-gray-400">${datos.cobros_mes.total.toLocaleString()}</div>
-        </div>
+        <KpiCard label="Saldo total" value={`$${datos.saldo_total.toLocaleString()}`} color="primary" icon={<DollarSign className="h-5 w-5" />} />
+        <KpiCard
+          label="Pagos ejecutados (mes)"
+          value={datos.pagos_mes.cantidad}
+          subtext={`$${datos.pagos_mes.total.toLocaleString()}`}
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="Pagos pendientes"
+          value={datos.pagos_pendientes.cantidad}
+          subtext={`$${datos.pagos_pendientes.total.toLocaleString()}`}
+          color="warning"
+          icon={<Clock className="h-5 w-5" />}
+        />
+        <KpiCard
+          label="Cobros este mes"
+          value={datos.cobros_mes.cantidad}
+          subtext={`$${datos.cobros_mes.total.toLocaleString()}`}
+          color="success"
+          icon={<ArrowDownLeft className="h-5 w-5" />}
+        />
       </div>
 
-      <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold">Saldo por Cuenta en Tiempo Real</h2>
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-gray-50">
-            <tr>
-              <th className="p-3">Cuenta</th>
-              <th className="p-3">Tipo</th>
-              <th className="p-3">N Cuenta</th>
-              <th className="p-3 text-right">Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {datos.cuentas.map((c: Cuenta) => (
-              <tr key={c.id_cuenta_bancaria} className="border-b">
-                <td className="p-3">{c.nombre_cuenta}</td>
-                <td className="p-3">
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    c.tipo === "Banco" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"
-                  }`}>{c.tipo}</span>
-                </td>
-                <td className="p-3 text-gray-500">{c.numero_cuenta || "-"}</td>
-                <td className="p-3 text-right font-medium">${c.saldo_actual.toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Card className="mb-6">
+        <CardHeader>Saldo por Cuenta en Tiempo Real</CardHeader>
+        <DataTable<Cuenta>
+          columns={cuentaColumns}
+          data={datos.cuentas}
+          keyExtractor={(c) => c.id_cuenta_bancaria}
+          emptyMessage="No hay cuentas registradas"
+        />
+      </Card>
 
-      <div className="rounded-lg border bg-white p-4 shadow-sm">
+      <Card>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Ultimos 20 Pagos Ejecutados</h2>
+          <CardHeader className="mb-0">Ultimos 20 Pagos Ejecutados</CardHeader>
           <div className="flex gap-2">
-            <button
-              onClick={() => exportarCSV("pagos_ejecutados.csv",
-                ["ID", "Monto", "Metodo", "N Operacion", "Fecha", "Proveedor", "Factura"],
-                datos.ultimos_pagos.map((p: Pago) => [
-                  p.id_pago, p.monto, p.metodo, p.numero_operacion || "",
-                  p.fecha_pago, p.razon_social || "", p.numero_factura || ""
-                ])
-              )}
-              className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
-            >CSV</button>
-            <button
-              onClick={() => exportarPDF("Pagos Ejecutados",
-                ["ID", "Monto", "Metodo", "N Operacion", "Fecha", "Proveedor", "Factura"],
-                datos.ultimos_pagos.map((p: Pago) => [
-                  p.id_pago, p.monto, p.metodo, p.numero_operacion || "",
-                  p.fecha_pago, p.razon_social || "", p.numero_factura || ""
-                ]),
-                { orientacion: "landscape" }
-              )}
-              className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
-            >PDF</button>
+            <Button variant="secondary" size="sm" onClick={() => exportarCSV("pagos_ejecutados.csv",
+              ["ID", "Monto", "Metodo", "N Operacion", "Fecha", "Proveedor", "Factura"],
+              datos.ultimos_pagos.map((p: Pago) => [
+                p.id_pago, p.monto, p.metodo, p.numero_operacion || "",
+                p.fecha_pago, p.razon_social || "", p.numero_factura || ""
+              ])
+            )}>CSV</Button>
+            <Button variant="danger" size="sm" onClick={() => exportarPDF("Pagos Ejecutados",
+              ["ID", "Monto", "Metodo", "N Operacion", "Fecha", "Proveedor", "Factura"],
+              datos.ultimos_pagos.map((p: Pago) => [
+                p.id_pago, p.monto, p.metodo, p.numero_operacion || "",
+                p.fecha_pago, p.razon_social || "", p.numero_factura || ""
+              ]),
+              { orientacion: "landscape" }
+            )}>PDF</Button>
           </div>
         </div>
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-gray-50">
-            <tr>
-              <th className="p-3">ID</th>
-              <th className="p-3 text-right">Monto</th>
-              <th className="p-3">Metodo</th>
-              <th className="p-3">N Operacion</th>
-              <th className="p-3">Fecha</th>
-              <th className="p-3">Proveedor</th>
-              <th className="p-3">Factura</th>
-            </tr>
-          </thead>
-          <tbody>
-            {datos.ultimos_pagos.length === 0 ? (
-              <tr><td colSpan={7} className="p-3 text-center text-gray-400">Sin pagos registrados</td></tr>
-            ) : datos.ultimos_pagos.map((p: Pago) => (
-              <tr key={p.id_pago} className="border-b">
-                <td className="p-3">#{p.id_pago}</td>
-                <td className="p-3 text-right font-medium">${p.monto.toLocaleString()}</td>
-                <td className="p-3">{p.metodo}</td>
-                <td className="p-3 text-gray-500">{p.numero_operacion || "-"}</td>
-                <td className="p-3 text-xs">{p.fecha_pago?.split("T")[0]}</td>
-                <td className="p-3">{p.razon_social || "-"}</td>
-                <td className="p-3 text-gray-500">{p.numero_factura || "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <DataTable<Pago>
+          columns={pagoColumns}
+          data={datos.ultimos_pagos}
+          keyExtractor={(p) => p.id_pago}
+          emptyMessage="Sin pagos registrados"
+        />
+      </Card>
     </div>
   );
 }
