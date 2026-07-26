@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
 import type { SolicitudPago } from "@/types";
 
@@ -91,6 +92,13 @@ export async function POST(request: NextRequest) {
       if (factura.estado !== "Pendiente") {
         throw new Error(`La factura está en estado '${factura.estado}', no se puede generar solicitud`);
       }
+
+      const cerrado = await verificarPeriodoAbiertoPorFecha(
+        (await client.query<{ fecha_emision: string }>(
+          "SELECT fecha_emision::text FROM facturas WHERE id_factura = $1", [id_factura]
+        )).rows[0].fecha_emision
+      );
+      if (cerrado) throw new Error("No se puede generar solicitud: el período está cerrado");
 
       if (!factura.id_partida) {
         throw new Error("La factura no tiene una partida presupuestaria asociada");

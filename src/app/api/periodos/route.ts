@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   if (denial) return denial;
 
   const result = await query<PeriodoFiscal>(
-    `SELECT id_periodo, nombre_periodo, fecha_inicio::text, fecha_fin::text, estado
+    `SELECT id_periodo, nombre_periodo, fecha_inicio::text, fecha_fin::text, estado,
+            fecha_cierre::text, balance_generado, balance_aprobado,
+            motivo_reapertura, fecha_aprobacion_balance::text, id_usuario_autoriza_reapertura
      FROM periodos_fiscales
      ORDER BY fecha_inicio DESC`
   );

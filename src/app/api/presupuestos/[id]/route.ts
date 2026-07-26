@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbierto } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
 
 interface PartidaRow {
@@ -107,6 +108,9 @@ export async function PUT(
       { status: 409 }
     );
   }
+
+  const cerrado = await verificarPeriodoAbierto(presupuesto.id_periodo);
+  if (cerrado) return cerrado;
 
   try {
     const body = await request.json();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import type { Factura } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -100,6 +101,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const cerrado = await verificarPeriodoAbiertoPorFecha(fecha_emision);
+    if (cerrado) return cerrado;
 
     if (tipo === "Compra") {
       if (!id_proveedor) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
 
 interface SolicitudRow {
@@ -67,11 +68,14 @@ export async function PATCH(
 
     if (accion === "aprobar") {
       await withTransaction(async (client) => {
-        const facturaResult = await client.query(
-          "SELECT id_partida FROM facturas WHERE id_factura = $1",
+        const facturaResult = await client.query<{ id_partida: number; fecha_emision: string }>(
+          "SELECT id_partida, fecha_emision::text FROM facturas WHERE id_factura = $1",
           [solicitud.id_factura]
         );
         const idPartida = facturaResult.rows[0]?.id_partida;
+
+        const cerrado = await verificarPeriodoAbiertoPorFecha(facturaResult.rows[0].fecha_emision);
+        if (cerrado) throw new Error("No se puede aprobar: el período está cerrado");
 
         if (idPartida) {
           const partidaResult = await client.query<PartidaRow>(

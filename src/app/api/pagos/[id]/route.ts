@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
 
 interface SolicitudRow {
   id_solicitud: number;
+  id_factura: number;
   estado: string;
 }
 
@@ -43,7 +45,7 @@ export async function PATCH(
     }
 
     const solicitudResult = await query<SolicitudRow>(
-      "SELECT id_solicitud, estado FROM solicitudes_pago WHERE id_solicitud = $1",
+      "SELECT id_solicitud, id_factura, estado FROM solicitudes_pago WHERE id_solicitud = $1",
       [id]
     );
 
@@ -59,6 +61,13 @@ export async function PATCH(
         { status: 409 }
       );
     }
+
+    const fechaResult = await query<{ fecha_emision: string }>(
+      "SELECT fecha_emision::text FROM facturas WHERE id_factura = $1",
+      [solicitud.id_factura]
+    );
+    const cerrado = await verificarPeriodoAbiertoPorFecha(fechaResult.rows[0].fecha_emision);
+    if (cerrado) return cerrado;
 
     const pagoExistente = await query<PagoExistente>(
       "SELECT id_pago FROM pagos WHERE id_solicitud = $1",

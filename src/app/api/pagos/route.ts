@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
 import type { Pago } from "@/types";
 
@@ -79,6 +80,13 @@ export async function POST(request: NextRequest) {
       if (solicitud.estado !== "Aprobada") {
         throw new Error(`La solicitud está en estado '${solicitud.estado}', solo se pueden ejecutar las aprobadas`);
       }
+
+      const fechaResult = await client.query<{ fecha_emision: string }>(
+        "SELECT f.fecha_emision::text FROM facturas f WHERE f.id_factura = $1",
+        [solicitud.id_factura]
+      );
+      const cerrado = await verificarPeriodoAbiertoPorFecha(fechaResult.rows[0].fecha_emision);
+      if (cerrado) throw new Error("No se puede ejecutar el pago: el período está cerrado");
 
       const cuentaResult = await client.query<CuentaRow>(
         "SELECT id_cuenta_bancaria, saldo_actual, activo FROM cuentas_bancarias WHERE id_cuenta_bancaria = $1",

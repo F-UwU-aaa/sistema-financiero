@@ -61,6 +61,12 @@ export interface PeriodoFiscal {
   fecha_inicio: string;
   fecha_fin: string;
   estado: string;
+  fecha_cierre?: string | null;
+  balance_generado?: boolean;
+  balance_aprobado?: boolean;
+  motivo_reapertura?: string | null;
+  fecha_aprobacion_balance?: string | null;
+  id_usuario_autoriza_reapertura?: number | null;
 }
 
 export interface ConfigItem {
@@ -199,4 +205,69 @@ export interface Cobro {
   numero_factura?: string;
   nombre_cliente?: string;
   nombre_cuenta_bancaria?: string;
+}
+
+export interface PeriodoFiscalCompleto extends PeriodoFiscal {
+  fecha_cierre: string | null;
+  id_usuario_cierre: number | null;
+  id_usuario_aprueba_cierre: number | null;
+  motivo_reapertura: string | null;
+  balance_generado: boolean;
+  fecha_balance: string | null;
+  id_usuario_genera_balance: number | null;
+  balance_aprobado: boolean;
+  id_usuario_aprueba_balance: number | null;
+  fecha_aprobacion_balance: string | null;
+  id_usuario_autoriza_reapertura: number | null;
+  nombre_usuario_cierre: string | null;
+  nombre_usuario_aprueba_balance: string | null;
+  nombre_usuario_autoriza_reapertura: string | null;
+}
+
+export interface EstadoResultados {
+  ingresos: number;
+  gastos: number;
+  resultado_neto: number;
+}
+
+export interface BalanceGeneral {
+  activo: {
+    cuentas_bancarias: number;
+    cuentas_por_cobrar: number;
+    total: number;
+  };
+  pasivo: {
+    cuentas_por_pagar: number;
+    total: number;
+  };
+  patrimonio: number;
+}
+
+export interface EjecucionArea {
+  nombre_area: string;
+  aprobado: number;
+  propuesto: number;
+  ejecutado: number;
+}
+
+export interface EjecucionCategoria {
+  nombre_categoria: string;
+  tipo: string;
+  asignado: number;
+  ejecutado: number;
+}
+
+export interface EjecucionPresupuestaria {
+  total_aprobado: number;
+  total_propuesto: number;
+  total_ejecutado: number;
+  por_area: EjecucionArea[];
+  por_categoria: EjecucionCategoria[];
+}
+
+export interface BalanceResultado {
+  periodo: PeriodoFiscalCompleto;
+  estado_resultados: EstadoResultados;
+  balance_general: BalanceGeneral;
+  ejecucion_presupuestaria: EjecucionPresupuestaria;
 }

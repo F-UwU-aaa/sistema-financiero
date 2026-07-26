@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbierto } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
 
 interface PresupuestoRow {
   id_presupuesto: number;
   id_usuario_elabora: number;
+  id_periodo: number;
   estado: string;
 }
 
@@ -22,7 +24,7 @@ export async function PATCH(
   const { id } = await params;
 
   const existing = await query<PresupuestoRow>(
-    "SELECT id_presupuesto, id_usuario_elabora, estado FROM presupuestos WHERE id_presupuesto = $1",
+    "SELECT id_presupuesto, id_usuario_elabora, id_periodo, estado FROM presupuestos WHERE id_presupuesto = $1",
     [id]
   );
 
@@ -38,6 +40,9 @@ export async function PATCH(
       { status: 409 }
     );
   }
+
+  const cerrado = await verificarPeriodoAbierto(presupuesto.id_periodo);
+  if (cerrado) return cerrado;
 
   if (presupuesto.id_usuario_elabora === session!.id_usuario) {
     return NextResponse.json(

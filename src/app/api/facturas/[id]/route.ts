@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
+import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 
 interface FacturaRow {
   id_factura: number;
   estado: string;
+  fecha_emision: string;
 }
 
 export async function PATCH(
@@ -18,7 +20,7 @@ export async function PATCH(
   const { id } = await params;
 
   const existing = await query<FacturaRow>(
-    "SELECT id_factura, estado FROM facturas WHERE id_factura = $1",
+    "SELECT id_factura, estado, fecha_emision FROM facturas WHERE id_factura = $1",
     [id]
   );
 
@@ -44,6 +46,9 @@ export async function PATCH(
       { status: 409 }
     );
   }
+
+  const cerrado = await verificarPeriodoAbiertoPorFecha(factura.fecha_emision);
+  if (cerrado) return cerrado;
 
   try {
     const body = await request.json();
