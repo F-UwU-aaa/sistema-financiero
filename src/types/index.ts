@@ -173,3 +173,30 @@ export interface Presupuesto {
   nombre_area?: string;
   nombre_periodo?: string;
 }
+
+export interface Pago {
+  id_pago: number;
+  id_solicitud: number;
+  id_cuenta_bancaria: number;
+  metodo: string;
+  numero_operacion: string | null;
+  monto: string;
+  fecha_pago: string;
+  id_usuario_ejecuta: number;
+  observacion_rechazo: string | null;
+  numero_factura?: string;
+  razon_social_proveedor?: string;
+  nombre_cuenta_bancaria?: string;
+}
+
+export interface Cobro {
+  id_cobro: number;
+  id_factura: number;
+  id_cuenta_bancaria: number;
+  monto: string;
+  fecha_cobro: string;
+  id_usuario_ejecuta: number;
+  numero_factura?: string;
+  nombre_cliente?: string;
+  nombre_cuenta_bancaria?: string;
+}
