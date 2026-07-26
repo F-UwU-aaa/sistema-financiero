@@ -69,3 +69,48 @@ export interface ConfigItem {
   valor: string;
   descripcion: string | null;
 }
+
+export interface CuentaContable {
+  id_cuenta: number;
+  codigo_cuenta: string;
+  nombre_cuenta: string;
+  tipo_cuenta: string;
+  id_cuenta_padre: number | null;
+  activo: boolean;
+}
+
+export interface CuentaBancaria {
+  id_cuenta_bancaria: number;
+  nombre_cuenta: string;
+  tipo: string;
+  numero_cuenta: string | null;
+  saldo_actual: string;
+  activo: boolean;
+}
+
+export interface Proveedor {
+  id_proveedor: number;
+  razon_social: string;
+  nit: string;
+  contacto: string | null;
+  condiciones_pago: string | null;
+  datos_cuenta_pago: string | null;
+  monto_contrato: string | null;
+  estado: string;
+  motivo_rechazo: string | null;
+  id_usuario_registra: number;
+  id_usuario_aprueba: number | null;
+  fecha_creacion?: string;
+}
+
+export interface Cliente {
+  id_cliente: number;
+  razon_social: string;
+  nit: string | null;
+  contacto: string | null;
+  datos_facturacion: string | null;
+  monto_relacion: string | null;
+  estado: string;
+  motivo_rechazo: string | null;
+  id_usuario_registra: number;
+}
