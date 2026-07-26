@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 import type { Cliente } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -62,6 +63,14 @@ export async function POST(request: NextRequest) {
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [razon_social, nit || null, contacto || null, datos_facturacion || null, monto_relacion || null, estado, session!.id_usuario]
     );
+
+    if (estado === "Pendiente") {
+      await notificarRol(
+        2,
+        "cliente_pendiente",
+        `Nuevo cliente "${razon_social}" registrado, pendiente de aprobación.`
+      );
+    }
 
     return NextResponse.json(
       { mensaje: estado === "Pendiente" ? "Cliente creado, pendiente de aprobación" : "Cliente creado y aprobado automáticamente", cliente: result.rows[0] },

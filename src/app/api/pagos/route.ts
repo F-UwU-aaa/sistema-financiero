@@ -4,6 +4,7 @@ import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { crearNotificacion, notificarRol } from "@/lib/notificaciones";
 import type { Pago } from "@/types";
 
 interface SolicitudRow {
@@ -129,6 +130,28 @@ export async function POST(request: NextRequest) {
         "UPDATE facturas SET estado = 'Pagada' WHERE id_factura = $1",
         [solicitud.id_factura]
       );
+
+      const solicitante = await client.query<{ id_usuario_solicita: number }>(
+        "SELECT id_usuario_solicita FROM solicitudes_pago WHERE id_solicitud = $1",
+        [id_solicitud]
+      );
+
+      await notificarRol(
+        2,
+        "pago_ejecutado",
+        `Pago de $${monto.toLocaleString()} ejecutado para solicitud #${id_solicitud}.`,
+        client
+      );
+      if (solicitante.rows[0]) {
+        await crearNotificacion(
+          {
+            id_usuario_destino: solicitante.rows[0].id_usuario_solicita,
+            tipo_evento: "pago_ejecutado",
+            mensaje: `Su solicitud de pago #${id_solicitud} fue ejecutada por ${session!.nombre_rol}. Monto: $${monto.toLocaleString()}.`,
+          },
+          client
+        );
+      }
 
       return pagoResult.rows[0];
     });

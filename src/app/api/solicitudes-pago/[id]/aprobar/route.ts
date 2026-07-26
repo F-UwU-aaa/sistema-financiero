@@ -4,6 +4,7 @@ import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { crearNotificacion, notificarRol } from "@/lib/notificaciones";
 
 interface SolicitudRow {
   id_solicitud: number;
@@ -11,6 +12,7 @@ interface SolicitudRow {
   monto: string;
   estado: string;
   tipo_aprobacion: string;
+  id_usuario_solicita: number;
 }
 
 interface PartidaRow {
@@ -31,7 +33,7 @@ export async function PATCH(
   const { id } = await params;
 
   const existing = await query<SolicitudRow>(
-    "SELECT id_solicitud, id_factura, monto, estado, tipo_aprobacion FROM solicitudes_pago WHERE id_solicitud = $1",
+    "SELECT id_solicitud, id_factura, monto, estado, tipo_aprobacion, id_usuario_solicita FROM solicitudes_pago WHERE id_solicitud = $1",
     [id]
   );
 
@@ -109,6 +111,21 @@ export async function PATCH(
            WHERE id_solicitud = $2`,
           [session!.id_usuario, id]
         );
+
+        await crearNotificacion(
+          {
+            id_usuario_destino: solicitud.id_usuario_solicita,
+            tipo_evento: "solicitud_pago_aprobada",
+            mensaje: `Su solicitud de pago #${id} por $${Number(solicitud.monto).toLocaleString()} fue aprobada por ${session!.nombre_rol}.`,
+          },
+          client
+        );
+        await notificarRol(
+          4,
+          "solicitud_pago_aprobada",
+          `Solicitud de pago #${id} por $${Number(solicitud.monto).toLocaleString()} fue aprobada. Lista para ejecución.`,
+          client
+        );
       });
 
       return NextResponse.json({ mensaje: "Solicitud aprobada" });
@@ -129,6 +146,12 @@ export async function PATCH(
          WHERE id_solicitud = $3`,
         [motivo.trim(), session!.id_usuario, id]
       );
+
+      await crearNotificacion({
+        id_usuario_destino: solicitud.id_usuario_solicita,
+        tipo_evento: "solicitud_pago_rechazada",
+        mensaje: `Su solicitud de pago #${id} por $${Number(solicitud.monto).toLocaleString()} fue rechazada por ${session!.nombre_rol}. Motivo: ${motivo}`,
+      });
 
       return NextResponse.json({ mensaje: "Solicitud rechazada" });
     }

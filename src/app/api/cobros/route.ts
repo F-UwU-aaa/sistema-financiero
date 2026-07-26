@@ -4,6 +4,7 @@ import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 import type { Cobro } from "@/types";
 
 interface FacturaRow {
@@ -114,6 +115,19 @@ export async function POST(request: NextRequest) {
       await client.query(
         "UPDATE facturas SET estado = 'Cobrada' WHERE id_factura = $1",
         [id_factura]
+      );
+
+      await notificarRol(
+        2,
+        "cobro_registrado",
+        `Cobro de $${montoNum.toLocaleString()} registrado para factura #${factura.id_factura}.`,
+        client
+      );
+      await notificarRol(
+        3,
+        "cobro_registrado",
+        `Cobro de $${montoNum.toLocaleString()} registrado para factura #${factura.id_factura}.`,
+        client
       );
 
       return cobroResult.rows[0];

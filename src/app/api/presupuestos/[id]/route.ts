@@ -4,6 +4,7 @@ import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { verificarPeriodoAbierto } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 
 interface PartidaRow {
   id_partida: number;
@@ -164,6 +165,14 @@ export async function PUT(
         );
       }
     });
+
+    if (enviar) {
+      await notificarRol(
+        2,
+        "presupuesto_pendiente",
+        `El presupuesto #${id} fue enviado a aprobación por ${session!.nombre_rol}`
+      );
+    }
 
     return NextResponse.json({ mensaje: enviar ? "Propuesta enviada a aprobación" : "Borrador guardado" });
   } catch (error) {

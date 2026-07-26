@@ -4,6 +4,7 @@ import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 import type { SolicitudPago } from "@/types";
 
 interface FacturaRow {
@@ -157,6 +158,27 @@ export async function POST(request: NextRequest) {
            SET monto_ejecutado = monto_ejecutado + $1
            WHERE id_partida = $2`,
           [montoFactura, factura.id_partida]
+        );
+      }
+
+      const nombreSolicitante = (
+        await client.query<{ nombre_completo: string }>(
+          "SELECT nombre_completo FROM usuarios WHERE id_usuario = $1",
+          [session!.id_usuario]
+        )
+      ).rows[0]?.nombre_completo || "Desconocido";
+
+      if (tipo_aprobacion === "Automatica") {
+        await notificarRol(
+          4,
+          "solicitud_pago_auto",
+          `Solicitud de pago #${solicitudResult.rows[0].id_solicitud} auto-aprobada por $${montoFactura.toLocaleString()}. Factura #${factura.id_factura} lista para ejecución.`
+        );
+      } else {
+        await notificarRol(
+          2,
+          "solicitud_pago_pendiente",
+          `Solicitud de pago #${solicitudResult.rows[0].id_solicitud} por $${montoFactura.toLocaleString()} creada por ${nombreSolicitante}. Requiere aprobación.`
         );
       }
 

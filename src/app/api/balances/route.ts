@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 import type { PeriodoFiscalCompleto, BalanceResultado } from "@/types";
 
 interface PeriodoRow {
@@ -268,6 +269,12 @@ export async function POST(request: NextRequest) {
            fecha_aprobacion_balance = NULL
        WHERE id_periodo = $2`,
       [session!.id_usuario, id_periodo]
+    );
+
+    await notificarRol(
+      2,
+      "balance_pendiente",
+      `Balance del período #${id_periodo} generado por ${session!.nombre_rol}. Pendiente de aprobación.`
     );
 
     return NextResponse.json({ mensaje: "Balance generado y marcado para aprobación" });

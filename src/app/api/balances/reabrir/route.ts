@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 
 interface PeriodoRow {
   id_periodo: number;
@@ -63,6 +64,12 @@ export async function POST(request: NextRequest) {
            fecha_aprobacion_balance = NULL
        WHERE id_periodo = $3 AND estado = 'Cerrado'`,
       [motivo.trim(), session!.id_usuario, id_periodo]
+    );
+
+    await notificarRol(
+      3,
+      "periodo_reabierto",
+      `El período #${id_periodo} fue reabierto por ${session!.nombre_rol}. Motivo: ${motivo.trim()}`
     );
 
     return NextResponse.json({ mensaje: "Período reabierto exitosamente" });

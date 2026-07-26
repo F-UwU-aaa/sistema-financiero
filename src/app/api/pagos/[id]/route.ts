@@ -4,6 +4,7 @@ import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { verificarPeriodoAbiertoPorFecha } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { crearNotificacion } from "@/lib/notificaciones";
 
 interface SolicitudRow {
   id_solicitud: number;
@@ -87,6 +88,18 @@ export async function PATCH(
        WHERE id_solicitud = $2`,
       [observacion.trim(), id]
     );
+
+    const solicitante = await query<{ id_usuario_solicita: number }>(
+      "SELECT id_usuario_solicita FROM solicitudes_pago WHERE id_solicitud = $1",
+      [id]
+    );
+    if (solicitante.rows[0]) {
+      await crearNotificacion({
+        id_usuario_destino: solicitante.rows[0].id_usuario_solicita,
+        tipo_evento: "solicitud_devuelta",
+        mensaje: `Su solicitud de pago #${id} fue devuelta por ${session!.nombre_rol}. Observación: ${observacion.trim()}`,
+      });
+    }
 
     return NextResponse.json({ mensaje: "Solicitud devuelta al Contador" });
   } catch (error) {

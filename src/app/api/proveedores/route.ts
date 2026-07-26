@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 import type { Proveedor } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -63,6 +64,14 @@ export async function POST(request: NextRequest) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
       [razon_social, nit, contacto || null, condiciones_pago || null, datos_cuenta_pago || null, monto_contrato || null, estado, session!.id_usuario]
     );
+
+    if (estado === "Pendiente") {
+      await notificarRol(
+        2,
+        "proveedor_pendiente",
+        `Nuevo proveedor "${razon_social}" registrado, pendiente de aprobación.`
+      );
+    }
 
     return NextResponse.json(
       { mensaje: estado === "Pendiente" ? "Proveedor creado, pendiente de aprobación" : "Proveedor creado y aprobado automáticamente", proveedor: result.rows[0] },

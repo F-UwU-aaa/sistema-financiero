@@ -3,12 +3,14 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { crearNotificacion } from "@/lib/notificaciones";
 
 interface PeriodoRow {
   id_periodo: number;
   balance_generado: boolean;
   balance_aprobado: boolean;
   estado: string;
+  id_usuario_genera_balance: number | null;
 }
 
 export async function PATCH(
@@ -23,7 +25,7 @@ export async function PATCH(
   const { id } = await params;
 
   const existing = await query<PeriodoRow>(
-    "SELECT id_periodo, balance_generado, balance_aprobado, estado FROM periodos_fiscales WHERE id_periodo = $1",
+    "SELECT id_periodo, balance_generado, balance_aprobado, estado, id_usuario_genera_balance FROM periodos_fiscales WHERE id_periodo = $1",
     [id]
   );
 
@@ -67,6 +69,13 @@ export async function PATCH(
          WHERE id_periodo = $2`,
         [session!.id_usuario, id]
       );
+      if (periodo.id_usuario_genera_balance) {
+        await crearNotificacion({
+          id_usuario_destino: periodo.id_usuario_genera_balance,
+          tipo_evento: "balance_aprobado",
+          mensaje: `El balance del período #${id} fue aprobado por ${session!.nombre_rol}.`,
+        });
+      }
       return NextResponse.json({ mensaje: "Balance aprobado" });
     } else {
       await query(
@@ -80,6 +89,13 @@ export async function PATCH(
          WHERE id_periodo = $1`,
         [id]
       );
+      if (periodo.id_usuario_genera_balance) {
+        await crearNotificacion({
+          id_usuario_destino: periodo.id_usuario_genera_balance,
+          tipo_evento: "balance_rechazado",
+          mensaje: `El balance del período #${id} fue rechazado por ${session!.nombre_rol}. Debe regenerarlo.`,
+        });
+      }
       return NextResponse.json({ mensaje: "Balance rechazado. El Contador debe regenerarlo." });
     }
   } catch (error) {

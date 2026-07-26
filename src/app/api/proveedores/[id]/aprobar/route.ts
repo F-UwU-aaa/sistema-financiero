@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { crearNotificacion } from "@/lib/notificaciones";
 
 export async function PATCH(
   request: NextRequest,
@@ -15,8 +16,8 @@ export async function PATCH(
   const session = verifySession(token!);
   const { id } = await params;
 
-  const existing = await query<{ id_proveedor: number; estado: string }>(
-    "SELECT id_proveedor, estado FROM proveedores WHERE id_proveedor = $1",
+  const existing = await query<{ id_proveedor: number; estado: string; id_usuario_registra: number }>(
+    "SELECT id_proveedor, estado, id_usuario_registra FROM proveedores WHERE id_proveedor = $1",
     [id]
   );
   if (existing.rows.length === 0) {
@@ -39,6 +40,11 @@ export async function PATCH(
         `UPDATE proveedores SET estado = 'Aprobado', id_usuario_aprueba = $1 WHERE id_proveedor = $2`,
         [session!.id_usuario, id]
       );
+      await crearNotificacion({
+        id_usuario_destino: existing.rows[0].id_usuario_registra,
+        tipo_evento: "proveedor_aprobado",
+        mensaje: `El proveedor #${id} fue aprobado por ${session!.nombre_rol}.`,
+      });
       return NextResponse.json({ mensaje: "Proveedor aprobado" });
     } else {
       if (!motivo || motivo.trim() === "") {
@@ -48,6 +54,11 @@ export async function PATCH(
         `UPDATE proveedores SET estado = 'Rechazado', motivo_rechazo = $1, id_usuario_aprueba = $2 WHERE id_proveedor = $3`,
         [motivo, session!.id_usuario, id]
       );
+      await crearNotificacion({
+        id_usuario_destino: existing.rows[0].id_usuario_registra,
+        tipo_evento: "proveedor_rechazado",
+        mensaje: `El proveedor #${id} fue rechazado por ${session!.nombre_rol}. Motivo: ${motivo}`,
+      });
       return NextResponse.json({ mensaje: "Proveedor rechazado" });
     }
   } catch (error) {

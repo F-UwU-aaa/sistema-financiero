@@ -29,10 +29,6 @@ export async function POST(request: NextRequest) {
     const usuario = result.rows[0];
 
     if (!usuario) {
-      await query(
-        "INSERT INTO historial_accesos (id_usuario, ip_origen, resultado) VALUES (0, $1, 'Fallido')",
-        [ipOrigen]
-      );
       return NextResponse.json(
         { error: "Credenciales inválidas" },
         { status: 401 }

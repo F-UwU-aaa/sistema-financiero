@@ -4,6 +4,7 @@ import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
 import { verificarPeriodoAbierto } from "@/lib/periodos";
 import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { crearNotificacion } from "@/lib/notificaciones";
 
 interface PresupuestoRow {
   id_presupuesto: number;
@@ -91,6 +92,15 @@ export async function PATCH(
             }
           }
         }
+
+        await crearNotificacion(
+          {
+            id_usuario_destino: presupuesto.id_usuario_elabora,
+            tipo_evento: "presupuesto_aprobado",
+            mensaje: `Su presupuesto #${id} fue aprobado por ${session!.nombre_rol}`,
+          },
+          client
+        );
       });
 
       return NextResponse.json({ mensaje: "Presupuesto aprobado" });
@@ -111,6 +121,12 @@ export async function PATCH(
          WHERE id_presupuesto = $3`,
         [motivo, session!.id_usuario, id]
       );
+
+      await crearNotificacion({
+        id_usuario_destino: presupuesto.id_usuario_elabora,
+        tipo_evento: "presupuesto_rechazado",
+        mensaje: `Su presupuesto #${id} fue rechazado por ${session!.nombre_rol}. Motivo: ${motivo}`,
+      });
 
       return NextResponse.json({ mensaje: "Presupuesto rechazado" });
     }
