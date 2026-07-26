@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Alert from "@/components/ui/Alert";
 
 export default function CambiarPasswordPage() {
   const router = useRouter();
@@ -49,67 +52,49 @@ export default function CambiarPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-2 text-center text-2xl font-bold text-gray-900">
-          Cambiar contraseña
-        </h1>
-        <p className="mb-6 text-center text-sm text-gray-600">
-          Es tu primer ingreso. Elegí una nueva contraseña para continuar.
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-surface-alt">
+      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-8 shadow-md">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold text-text">Cambiar contraseña</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Es tu primer ingreso. Elegí una nueva contraseña para continuar.
+          </p>
+        </div>
 
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <Alert variant="error" className="mb-4">
             {error}
-          </div>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Nueva contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Mínimo 8 caracteres"
-            />
-          </div>
+          <Input
+            label="Nueva contraseña"
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mínimo 8 caracteres"
+          />
 
-          <div>
-            <label
-              htmlFor="confirmar"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Confirmar contraseña
-            </label>
-            <input
-              id="confirmar"
-              type="password"
-              required
-              minLength={8}
-              value={confirmar}
-              onChange={(e) => setConfirmar(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Repetí la contraseña"
-            />
-          </div>
+          <Input
+            label="Confirmar contraseña"
+            type="password"
+            required
+            minLength={8}
+            value={confirmar}
+            onChange={(e) => setConfirmar(e.target.value)}
+            placeholder="Repetí la contraseña"
+          />
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            loading={loading}
+            className="w-full"
           >
             {loading ? "Guardando..." : "Guardar contraseña"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>
