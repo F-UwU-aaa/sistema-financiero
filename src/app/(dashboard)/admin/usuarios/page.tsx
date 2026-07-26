@@ -2,6 +2,15 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { UsuarioConRol, HistorialAcceso } from "@/types";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Modal from "@/components/ui/Modal";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import Alert from "@/components/ui/Alert";
+import { UserPlus } from "lucide-react";
+import DataTable, { type Column } from "@/components/ui/DataTable";
 
 const ROLES_OPTIONS = [
   "Administrador del Sistema",
@@ -143,133 +152,77 @@ export default function UsuariosPage() {
     navigator.clipboard.writeText(tempPassword);
   }
 
+  const columnas: Column<UsuarioConRol>[] = [
+    { key: "nombre_completo", header: "Nombre" },
+    { key: "correo", header: "Correo" },
+    { key: "nombre_rol", header: "Rol" },
+    { key: "activo", header: "Estado", render: (u) => <EstadoBadge estado={u.activo ? "Aprobado" : "Rechazado"} /> },
+    { key: "ultimo_acceso", header: "Último acceso", render: (u) => u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString() : "Nunca" },
+    { key: "acciones", header: "Acciones", render: (u) => (
+      <div className="flex gap-2">
+        <button onClick={() => abrirHistorial(u.id_usuario)} className="text-primary hover:underline text-xs">Ver</button>
+        <button onClick={() => abrirEditar(u)} className="text-primary hover:underline text-xs">Editar</button>
+        <button onClick={() => toggleActivo(u.id_usuario)} className="text-warning hover:underline text-xs">{u.activo ? "Desactivar" : "Activar"}</button>
+        <button onClick={() => restablecerPassword(u.id_usuario)} className="text-orange-600 hover:underline text-xs">Restablecer</button>
+        <button onClick={() => eliminarUsuario(u.id_usuario)} className="text-danger hover:underline text-xs">Eliminar</button>
+      </div>
+    )},
+  ];
+
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
-        <button onClick={abrirCrear} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-          + Nuevo usuario
-        </button>
-      </div>
+      <PageHeader title="Gestión de Usuarios" actions={<Button onClick={abrirCrear}><UserPlus className="h-4 w-4" /> Nuevo usuario</Button>} />
 
       <div className="mb-4 flex gap-4">
-        <select value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos los roles</option>
-          {ROLES_OPTIONS.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-        <select value={filtroActivo} onChange={(e) => setFiltroActivo(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-          <option value="">Todos</option>
-          <option value="true">Activos</option>
-          <option value="false">Inactivos</option>
-        </select>
+        <Select value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)} options={[{ value: "", label: "Todos los roles" }, ...ROLES_OPTIONS.map((r) => ({ value: r, label: r }))]} placeholder="Todos los roles" />
+        <Select value={filtroActivo} onChange={(e) => setFiltroActivo(e.target.value)} options={[{ value: "", label: "Todos" }, { value: "true", label: "Activos" }, { value: "false", label: "Inactivos" }]} placeholder="Todos" />
       </div>
 
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-gray-50">
-          <tr>
-            <th className="p-3">Nombre</th>
-            <th className="p-3">Correo</th>
-            <th className="p-3">Rol</th>
-            <th className="p-3">Estado</th>
-            <th className="p-3">Último acceso</th>
-            <th className="p-3">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {usuarios.map((u) => (
-            <tr key={u.id_usuario} className="border-b">
-              <td className="p-3">{u.nombre_completo}</td>
-              <td className="p-3">{u.correo}</td>
-              <td className="p-3">{u.nombre_rol}</td>
-              <td className="p-3">
-                <span className={u.activo ? "text-green-600" : "text-red-600"}>
-                  {u.activo ? "Activo" : "Inactivo"}
-                </span>
-              </td>
-              <td className="p-3">{u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleString() : "Nunca"}</td>
-              <td className="flex gap-2 p-3">
-                <button onClick={() => abrirHistorial(u.id_usuario)} className="text-blue-600 hover:underline text-xs">Ver</button>
-                <button onClick={() => abrirEditar(u)} className="text-blue-600 hover:underline text-xs">Editar</button>
-                <button onClick={() => toggleActivo(u.id_usuario)} className="text-yellow-600 hover:underline text-xs">
-                  {u.activo ? "Desactivar" : "Activar"}
-                </button>
-                <button onClick={() => restablecerPassword(u.id_usuario)} className="text-orange-600 hover:underline text-xs">Restablecer</button>
-                <button onClick={() => eliminarUsuario(u.id_usuario)} className="text-red-600 hover:underline text-xs">Eliminar</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable columns={columnas} data={usuarios} keyExtractor={(u) => u.id_usuario} emptyMessage="No hay usuarios" />
 
       {(modal === "crear" || modal === "editar") && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold">{modal === "crear" ? "Crear usuario" : "Editar usuario"}</h2>
-            {error && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
-            <input placeholder="Nombre completo" value={formulario.nombre_completo} onChange={(e) => setFormulario({ ...formulario, nombre_completo: e.target.value })} className="mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            <input placeholder="Correo electrónico" type="email" value={formulario.correo} onChange={(e) => setFormulario({ ...formulario, correo: e.target.value })} className="mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
-            <select value={formulario.id_rol} onChange={(e) => setFormulario({ ...formulario, id_rol: e.target.value })} className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-              <option value="">Seleccionar rol</option>
-              {ROLES_OPTIONS.map((r, i) => (
-                <option key={r} value={i + 1}>{r}</option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setModal(null)} className="rounded-md border px-4 py-2 text-sm">Cancelar</button>
-              <button onClick={modal === "crear" ? crearUsuario : editarUsuario} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-                {modal === "crear" ? "Crear" : "Guardar"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <Modal open onClose={() => setModal(null)} title={modal === "crear" ? "Crear usuario" : "Editar usuario"} footer={<><Button onClick={() => setModal(null)} variant="secondary">Cancelar</Button><Button onClick={modal === "crear" ? crearUsuario : editarUsuario}>{modal === "crear" ? "Crear" : "Guardar"}</Button></>}>
+          {error && <Alert variant="error">{error}</Alert>}
+          <Input placeholder="Nombre completo" value={formulario.nombre_completo} onChange={(e) => setFormulario({ ...formulario, nombre_completo: e.target.value })} />
+          <Input placeholder="Correo electrónico" type="email" value={formulario.correo} onChange={(e) => setFormulario({ ...formulario, correo: e.target.value })} />
+          <Select value={formulario.id_rol} onChange={(e) => setFormulario({ ...formulario, id_rol: e.target.value })} options={[{ value: "", label: "Seleccionar rol" }, ...ROLES_OPTIONS.map((r, i) => ({ value: String(i + 1), label: r }))]} placeholder="Seleccionar rol" />
+        </Modal>
       )}
 
       {modal === "tempPassword" && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h2 className="mb-2 text-lg font-bold">Contraseña temporal generada</h2>
-            <p className="mb-4 text-sm text-gray-600">Esta contraseña solo se muestra una vez. Anótela o cópiela antes de cerrar.</p>
-            <div className="mb-4 flex items-center gap-2 rounded-md bg-gray-100 p-3">
-              <code className="flex-1 text-sm font-mono">{tempPassword}</code>
-              <button onClick={copiarPassword} className="text-blue-600 hover:underline text-xs">Copiar</button>
-            </div>
-            <button onClick={() => setModal(null)} className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">Cerrar</button>
+        <Modal open onClose={() => setModal(null)} title="Contraseña temporal generada" footer={<Button onClick={() => setModal(null)}>Cerrar</Button>}>
+          <p className="mb-4 text-sm text-gray-600">Esta contraseña solo se muestra una vez. Anótela o cópiela antes de cerrar.</p>
+          <div className="mb-4 flex items-center gap-2 rounded-md bg-gray-100 p-3">
+            <code className="flex-1 text-sm font-mono">{tempPassword}</code>
+            <Button onClick={copiarPassword} variant="secondary">Copiar</Button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {modal === "historial" && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6">
-            <h2 className="mb-2 text-lg font-bold">Historial de accesos</h2>
-            <p className="mb-4 text-sm text-gray-600">{usuarioActual?.nombre_completo} — {usuarioActual?.correo}</p>
-            {historial.length === 0 ? (
-              <p className="text-sm text-gray-500">Sin registros de acceso.</p>
-            ) : (
-              <table className="w-full text-left text-xs">
-                <thead className="border-b">
-                  <tr><th className="p-2">Fecha</th><th className="p-2">IP</th><th className="p-2">Resultado</th></tr>
-                </thead>
-                <tbody>
-                  {historial.map((h) => (
-                    <tr key={h.id_acceso} className="border-b">
-                      <td className="p-2">{new Date(h.fecha_hora).toLocaleString()}</td>
-                      <td className="p-2">{h.ip_origen}</td>
-                      <td className="p-2">
-                        <span className={h.resultado === "Exitoso" ? "text-green-600" : "text-red-600"}>
-                          {h.resultado}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            <button onClick={() => setModal(null)} className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm">Cerrar</button>
-          </div>
-        </div>
+        <Modal open onClose={() => setModal(null)} title="Historial de accesos" footer={<Button onClick={() => setModal(null)} variant="secondary">Cerrar</Button>}>
+          <p className="mb-4 text-sm text-gray-600">{usuarioActual?.nombre_completo} — {usuarioActual?.correo}</p>
+          {historial.length === 0 ? (
+            <p className="text-sm text-gray-500">Sin registros de acceso.</p>
+          ) : (
+            <table className="w-full text-left text-xs">
+              <thead className="border-b">
+                <tr><th className="p-2">Fecha</th><th className="p-2">IP</th><th className="p-2">Resultado</th></tr>
+              </thead>
+              <tbody>
+                {historial.map((h) => (
+                  <tr key={h.id_acceso} className="border-b">
+                    <td className="p-2">{new Date(h.fecha_hora).toLocaleString()}</td>
+                    <td className="p-2">{h.ip_origen}</td>
+                    <td className="p-2">
+                      <EstadoBadge estado={h.resultado === "Exitoso" ? "Aprobado" : "Rechazado"} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Modal>
       )}
     </div>
   );

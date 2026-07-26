@@ -2,6 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { exportarCSV, exportarPDF } from "@/lib/export";
+import PageHeader from "@/components/ui/PageHeader";
+import KpiCard from "@/components/ui/KpiCard";
+import Card, { CardHeader } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import EstadoBadge from "@/components/ui/EstadoBadge";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import { Users, UserCheck, UserX, LogIn } from "lucide-react";
 
 interface RolCount {
   nombre_rol: string;
@@ -20,6 +27,14 @@ interface Acceso {
   ip_origen: string;
   resultado: string;
 }
+
+const columnasAccesos: Column<Acceso>[] = [
+  { key: "nombre_completo", header: "Usuario" },
+  { key: "correo", header: "Correo", className: "text-text-secondary" },
+  { key: "fecha_hora", header: "Fecha/Hora", className: "text-xs" },
+  { key: "ip_origen", header: "IP", className: "text-xs text-text-secondary", render: (a) => a.ip_origen || "-" },
+  { key: "resultado", header: "Resultado", render: (a) => <EstadoBadge estado={a.resultado} /> },
+];
 
 export default function DashboardAdminPage() {
   const [usuariosPorRol, setUsuariosPorRol] = useState<RolCount[]>([]);
@@ -49,74 +64,64 @@ export default function DashboardAdminPage() {
   const activos = usuariosActivos.find((r) => r.activo);
   const inactivos = usuariosActivos.find((r) => !r.activo);
 
-  if (cargando) return <div className="p-6 text-gray-500">Cargando...</div>;
+  if (cargando) return <div className="p-6 text-text-muted">Cargando...</div>;
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Dashboard del Administrador</h1>
+      <PageHeader title="Dashboard del Administrador" />
 
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Total usuarios</div>
-          <div className="mt-1 text-3xl font-bold">{totalUsuarios}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Activos</div>
-          <div className="mt-1 text-3xl font-bold text-green-600">{activos?.cantidad || 0}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Inactivos</div>
-          <div className="mt-1 text-3xl font-bold text-red-600">{inactivos?.cantidad || 0}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="text-sm text-gray-500">Logins hoy</div>
-          <div className="mt-1 text-3xl font-bold text-blue-600">{loginsHoy}</div>
-        </div>
+        <KpiCard label="Total usuarios" value={totalUsuarios} icon={<Users className="h-5 w-5" />} color="primary" />
+        <KpiCard label="Activos" value={activos?.cantidad || 0} icon={<UserCheck className="h-5 w-5" />} color="success" />
+        <KpiCard label="Inactivos" value={inactivos?.cantidad || 0} icon={<UserX className="h-5 w-5" />} color="danger" />
+        <KpiCard label="Logins hoy" value={loginsHoy} icon={<LogIn className="h-5 w-5" />} color="info" />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Usuarios por Rol</h2>
+        <Card>
+          <CardHeader>Usuarios por Rol</CardHeader>
           <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50">
+            <thead className="border-b border-border">
               <tr>
-                <th className="p-3">Rol</th>
-                <th className="p-3">Cantidad</th>
+                <th className="py-2 text-xs font-medium text-text-secondary uppercase">Rol</th>
+                <th className="py-2 text-xs font-medium text-text-secondary uppercase">Cantidad</th>
               </tr>
             </thead>
             <tbody>
               {usuariosPorRol.map((r) => (
-                <tr key={r.nombre_rol} className="border-b">
-                  <td className="p-3">{r.nombre_rol}</td>
-                  <td className="p-3 font-medium">{r.cantidad}</td>
+                <tr key={r.nombre_rol} className="border-b border-border last:border-0">
+                  <td className="py-2">{r.nombre_rol}</td>
+                  <td className="py-2 font-medium">{r.cantidad}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
 
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Seguridad</h2>
+        <Card>
+          <CardHeader>Seguridad</CardHeader>
           <div className="space-y-3">
-            <div className="flex items-center justify-between rounded bg-gray-50 p-3">
-              <span className="text-sm text-gray-600">Intentos fallidos (7 días)</span>
-              <span className={`text-lg font-bold ${fallidos7d > 0 ? "text-red-600" : "text-green-600"}`}>
+            <div className="flex items-center justify-between rounded-md bg-surface-alt p-3">
+              <span className="text-sm text-text-secondary">Intentos fallidos (7 días)</span>
+              <span className={`text-lg font-bold ${fallidos7d > 0 ? "text-danger" : "text-success"}`}>
                 {fallidos7d}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded bg-gray-50 p-3">
-              <span className="text-sm text-gray-600">Logins exitosos hoy</span>
-              <span className="text-lg font-bold text-blue-600">{loginsHoy}</span>
+            <div className="flex items-center justify-between rounded-md bg-surface-alt p-3">
+              <span className="text-sm text-text-secondary">Logins exitosos hoy</span>
+              <span className="text-lg font-bold text-info">{loginsHoy}</span>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
-      <div className="rounded-lg border bg-white p-4 shadow-sm">
+      <Card>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Últimos 20 Accesos</h2>
+          <CardHeader className="mb-0">Últimos 20 Accesos</CardHeader>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() =>
                 exportarCSV(
                   "accesos_recientes.csv",
@@ -130,11 +135,12 @@ export default function DashboardAdminPage() {
                   ])
                 )
               }
-              className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
             >
               CSV
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
               onClick={() =>
                 exportarPDF(
                   "Accesos Recientes",
@@ -148,43 +154,18 @@ export default function DashboardAdminPage() {
                   ])
                 )
               }
-              className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
             >
               PDF
-            </button>
+            </Button>
           </div>
         </div>
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-gray-50">
-            <tr>
-              <th className="p-3">Usuario</th>
-              <th className="p-3">Correo</th>
-              <th className="p-3">Fecha/Hora</th>
-              <th className="p-3">IP</th>
-              <th className="p-3">Resultado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accesosRecientes.length === 0 ? (
-              <tr><td colSpan={5} className="p-3 text-center text-gray-400">Sin accesos</td></tr>
-            ) : accesosRecientes.map((a, i) => (
-              <tr key={i} className="border-b">
-                <td className="p-3">{a.nombre_completo}</td>
-                <td className="p-3 text-gray-500">{a.correo}</td>
-                <td className="p-3 text-xs">{a.fecha_hora}</td>
-                <td className="p-3 text-xs text-gray-500">{a.ip_origen || "-"}</td>
-                <td className="p-3">
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    a.resultado === "Exitoso" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                  }`}>
-                    {a.resultado}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <DataTable
+          columns={columnasAccesos}
+          data={accesosRecientes}
+          keyExtractor={(_, i) => i}
+          emptyMessage="Sin accesos"
+        />
+      </Card>
     </div>
   );
 }
