@@ -114,3 +114,62 @@ export interface Cliente {
   motivo_rechazo: string | null;
   id_usuario_registra: number;
 }
+
+export interface Factura {
+  id_factura: number;
+  tipo: "Compra" | "Venta";
+  id_proveedor: number | null;
+  id_cliente: number | null;
+  id_partida: number | null;
+  numero_factura: string;
+  monto: string;
+  fecha_emision: string;
+  fecha_vencimiento: string | null;
+  estado: string;
+  motivo_anulacion: string | null;
+  id_usuario_registra: number;
+  fecha_registro: string;
+  nombre_proveedor?: string;
+  nombre_cliente?: string;
+  categoria_partida?: string;
+}
+
+export interface SolicitudPago {
+  id_solicitud: number;
+  id_factura: number;
+  monto: string;
+  estado: string;
+  tipo_aprobacion: string;
+  motivo_rechazo: string | null;
+  id_usuario_solicita: number;
+  id_usuario_aprueba: number | null;
+  fecha_solicitud: string;
+  fecha_resolucion: string | null;
+  numero_factura?: string;
+  razon_social_proveedor?: string;
+}
+
+export interface PartidaPresupuestaria {
+  id_partida: number;
+  id_presupuesto: number;
+  id_categoria: number;
+  monto_asignado: string;
+  monto_ejecutado: string;
+  nombre_categoria?: string;
+}
+
+export interface Presupuesto {
+  id_presupuesto: number;
+  id_area: number;
+  id_periodo: number;
+  monto_total_propuesto: string;
+  monto_total_aprobado: string | null;
+  estado: string;
+  motivo_rechazo: string | null;
+  id_usuario_elabora: number;
+  id_usuario_aprueba: number | null;
+  fecha_creacion: string;
+  fecha_resolucion: string | null;
+  nombre_area?: string;
+  nombre_periodo?: string;
+}
