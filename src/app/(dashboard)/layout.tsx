@@ -1,17 +1,25 @@
-import NotificationBell from "@/components/layout/NotificationBell";
+import { redirect } from "next/navigation";
+import { getRolActual } from "@/lib/rbac";
+import Sidebar from "@/components/layout/Sidebar";
+import Navbar from "@/components/layout/Navbar";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const rol = await getRolActual();
+  if (!rol) redirect("/login");
+
   return (
-    <div>
-      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white px-6 py-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">
-            Sistema de Gestión Financiera
-          </span>
-          <NotificationBell />
-        </div>
-      </header>
-      <main>{children}</main>
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar rol={rol} />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Navbar rol={rol} />
+        <main className="flex-1 overflow-y-auto bg-surface-alt scrollbar-thin">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
