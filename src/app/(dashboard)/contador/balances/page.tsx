@@ -84,7 +84,7 @@ export default function BalancesPage() {
     { key: "nombre_area", header: "Área" },
     { key: "aprobado", header: "Aprobado", render: (row) => fmt(row.aprobado) },
     { key: "ejecutado", header: "Ejecutado", render: (row) => fmt(row.ejecutado) },
-    { key: "aprobado", header: "%", align: "right", render: (row) => row.aprobado > 0 ? `${((row.ejecutado / row.aprobado) * 100).toFixed(1)}%` : "0%" },
+    { key: "aprobado_pct", header: "%", align: "right", render: (row) => row.aprobado > 0 ? `${((row.ejecutado / row.aprobado) * 100).toFixed(1)}%` : "0%" },
   ];
 
   const porCategoriaColumns: Column<{ nombre_categoria: string; tipo: string; asignado: number; ejecutado: number }>[] = [
@@ -92,7 +92,7 @@ export default function BalancesPage() {
     { key: "tipo", header: "Tipo" },
     { key: "asignado", header: "Asignado", render: (row) => fmt(row.asignado) },
     { key: "ejecutado", header: "Ejecutado", render: (row) => fmt(row.ejecutado) },
-    { key: "asignado", header: "%", align: "right", render: (row) => row.asignado > 0 ? `${((row.ejecutado / row.asignado) * 100).toFixed(1)}%` : "0%" },
+    { key: "asignado_pct", header: "%", align: "right", render: (row) => row.asignado > 0 ? `${((row.ejecutado / row.asignado) * 100).toFixed(1)}%` : "0%" },
   ];
 
   return (

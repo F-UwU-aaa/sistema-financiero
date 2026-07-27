@@ -118,6 +118,7 @@ function corruptPayloadCookie(cookie: string): string {
     id_usuario: 9999,
     id_rol: 1,
     nombre_rol: "Administrador del Sistema",
+    nombre_completo: "Test User",
     debe_cambiar_password: false,
     exp: Date.now() + 86400000,
   };

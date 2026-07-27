@@ -180,6 +180,26 @@ export async function getRolActual(): Promise<string | null> {
   }
 }
 
+export async function getUsuarioActual(): Promise<{ nombre_rol: string; nombre_completo: string } | null> {
+  try {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const token = cookieStore.get(COOKIE_NAME)?.value;
+
+    if (!token) return null;
+
+    const session = verifySession(token);
+    if (!session) return null;
+
+    return {
+      nombre_rol: session.nombre_rol,
+      nombre_completo: session.nombre_completo,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export const MODULOS: Record<Modulo, string> = {
   usuarios: "Usuarios y Roles",
   configuracion: "Configuración del sistema",

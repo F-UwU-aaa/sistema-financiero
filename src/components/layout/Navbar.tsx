@@ -1,20 +1,29 @@
 "use client";
 
 import NotificationBell from "./NotificationBell";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 export interface NavbarProps {
   rol: string;
+  nombre: string;
 }
 
-export default function Navbar({ rol }: NavbarProps) {
+export default function Navbar({ rol, nombre }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-surface px-6">
       <div />
       <div className="flex items-center gap-4">
         <NotificationBell />
         <div className="h-5 w-px bg-border" />
-        <span className="text-sm text-text-secondary">{rol}</span>
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10">
+            <User className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-sm font-medium text-text">{nombre}</p>
+            <p className="text-xs text-text-secondary">{rol}</p>
+          </div>
+        </div>
         <button
           onClick={async () => {
             await fetch("/api/auth/logout", { method: "POST" });

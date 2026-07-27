@@ -77,9 +77,10 @@ const rolShortNames: Record<string, string> = {
 
 export interface SidebarProps {
   rol: string;
+  nombre: string;
 }
 
-export default function Sidebar({ rol }: SidebarProps) {
+export default function Sidebar({ rol, nombre }: SidebarProps) {
   const pathname = usePathname();
   const items = menus[rol] || [];
 
@@ -119,9 +120,8 @@ export default function Sidebar({ rol }: SidebarProps) {
       </nav>
 
       <div className="border-t border-white/10 px-5 py-4">
-        <p className="text-xs font-medium text-sidebar-text">
-          {rolShortNames[rol] || rol}
-        </p>
+        <p className="text-sm font-medium text-white leading-tight">{nombre}</p>
+        <p className="text-xs text-sidebar-text">{rolShortNames[rol] || rol}</p>
       </div>
     </aside>
   );

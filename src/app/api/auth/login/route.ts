@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       id_usuario: usuario.id_usuario,
       id_rol: usuario.id_rol,
       nombre_rol,
+      nombre_completo: usuario.nombre_completo,
       debe_cambiar_password: usuario.debe_cambiar_password,
       exp: Date.now() + 24 * 60 * 60 * 1000,
     };
@@ -87,6 +88,8 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       mensaje: "Login exitoso",
+      nombre_rol,
+      nombre_completo: usuario.nombre_completo,
       debe_cambiar_password: usuario.debe_cambiar_password,
     });
 

@@ -2,6 +2,7 @@ export interface SessionPayload {
   id_usuario: number;
   id_rol: number;
   nombre_rol: string;
+  nombre_completo: string;
   debe_cambiar_password: boolean;
   exp: number;
 }
