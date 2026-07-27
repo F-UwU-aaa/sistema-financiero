@@ -15,13 +15,16 @@ export default function Navbar({ rol }: NavbarProps) {
         <NotificationBell />
         <div className="h-5 w-px bg-border" />
         <span className="text-sm text-text-secondary">{rol}</span>
-        <a
-          href="/api/auth/logout"
-          className="flex items-center gap-1.5 rounded-md p-1.5 text-text-muted hover:bg-surface-alt hover:text-text transition-colors"
+        <button
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+          className="flex items-center gap-1.5 rounded-md p-1.5 text-text-muted hover:bg-surface-alt hover:text-text transition-colors cursor-pointer"
           title="Cerrar sesión"
         >
           <LogOut className="h-4 w-4" />
-        </a>
+        </button>
       </div>
     </header>
   );

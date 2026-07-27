@@ -48,8 +48,21 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/cambiar-password", request.url));
   }
 
+  const roleMap: Record<string, string> = {
+    "Administrador del Sistema": "admin",
+    "Gerente Financiero": "gerente",
+    Contador: "contador",
+    Tesorero: "tesorero",
+    Auditor: "auditor",
+  };
+  const slug = roleMap[session.nombre_rol] || "admin";
+
   if (!session.debe_cambiar_password && pathname === "/cambiar-password") {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL(`/${slug}/dashboard`, request.url));
+  }
+
+  if (!session.debe_cambiar_password && pathname === "/") {
+    return NextResponse.redirect(new URL(`/${slug}/dashboard`, request.url));
   }
 
   return NextResponse.next();
