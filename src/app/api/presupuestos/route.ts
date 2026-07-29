@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import { verificarPermiso } from "@/lib/rbac";
-import { COOKIE_NAME } from "@/lib/auth";
-import { verifySession } from "@/lib/auth";
+import { COOKIE_NAME, verifySession } from "@/lib/auth";
+import { notificarRol } from "@/lib/notificaciones";
 
 interface PresupuestoRow {
   id_presupuesto: number;
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id_area, id_periodo, partidas } = body;
+    const { id_area, id_periodo, partidas, enviar } = body;
 
     if (!id_area || !id_periodo || !Array.isArray(partidas) || partidas.length === 0) {
       return NextResponse.json(
@@ -135,12 +135,14 @@ export async function POST(request: NextRequest) {
       0
     );
 
+    const estadoFinal = enviar ? "Pendiente" : "Borrador";
+
     const result = await withTransaction(async (client) => {
       const presResult = await client.query<{ id_presupuesto: number }>(
         `INSERT INTO presupuestos (id_area, id_periodo, monto_total_propuesto, estado, id_usuario_elabora)
-         VALUES ($1, $2, $3, 'Borrador', $4)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id_presupuesto`,
-        [id_area, id_periodo, montoTotal, session!.id_usuario]
+        [id_area, id_periodo, montoTotal, estadoFinal, session!.id_usuario]
       );
 
       const idPresupuesto = presResult.rows[0].id_presupuesto;
@@ -155,17 +157,23 @@ export async function POST(request: NextRequest) {
       return idPresupuesto;
     });
 
+    if (enviar) {
+      await notificarRol(
+        2,
+        "presupuesto_pendiente",
+        `El presupuesto #${result} fue enviado a aprobación por ${session!.nombre_rol}`
+      );
+    }
+
     return NextResponse.json(
-      { mensaje: "Propuesta creada como borrador", id_presupuesto: result },
+      { mensaje: enviar ? "Propuesta enviada a aprobación" : "Propuesta creada como borrador", id_presupuesto: result },
       { status: 201 }
     );
   } catch (error) {
     console.error("Error al crear presupuesto:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { error: `Error interno del servidor: ${String(error)}` },
       { status: 500 }
     );
   }
 }
-
-import { withTransaction } from "@/lib/db";

@@ -83,14 +83,20 @@ export async function PATCH(
         );
 
         if (Array.isArray(partidas)) {
+          let totalReal = 0;
           for (const p of partidas) {
             if (p.id_partida && p.monto_asignado !== undefined) {
               await client.query(
                 "UPDATE partidas_presupuestarias SET monto_asignado = $1 WHERE id_partida = $2 AND id_presupuesto = $3",
                 [p.monto_asignado, p.id_partida, id]
               );
+              totalReal += Number(p.monto_asignado);
             }
           }
+          await client.query(
+            "UPDATE presupuestos SET monto_total_propuesto = $1 WHERE id_presupuesto = $2",
+            [totalReal, id]
+          );
         }
 
         await crearNotificacion(

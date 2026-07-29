@@ -57,7 +57,7 @@ const MATRIZ_PERMISOS: Record<Modulo, Record<Rol, Accion[]>> = {
   },
   presupuestos: {
     "Administrador del Sistema": [],
-    "Gerente Financiero": ["leer", "aprobar"],
+    "Gerente Financiero": ["leer", "aprobar", "modificar"],
     "Contador": ["crear", "leer", "modificar"],
     "Tesorero": [],
     "Auditor": ["leer"],

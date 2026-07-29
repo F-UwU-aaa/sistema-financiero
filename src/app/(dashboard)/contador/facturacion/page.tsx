@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import type { Factura, SolicitudPago, Proveedor, Cliente, Categoria, PartidaPresupuestaria } from "@/types";
+import type { Factura, SolicitudPago, Proveedor, Cliente, Categoria, PartidaPresupuestaria, PeriodoFiscal } from "@/types";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
@@ -15,6 +15,8 @@ import type { Column } from "@/components/ui/DataTable";
 
 interface PartidaConSaldo extends PartidaPresupuestaria {
   saldo_disponible: number;
+  nombre_area?: string;
+  nombre_periodo?: string;
 }
 
 export default function FacturacionPage() {
@@ -41,6 +43,7 @@ export default function FacturacionPage() {
 
   const [motivoAnulacion, setMotivoAnulacion] = useState("");
   const [resultadoSolicitud, setResultadoSolicitud] = useState<string | null>(null);
+  const [periodoAbierto, setPeriodoAbierto] = useState<PeriodoFiscal | null>(null);
 
   const cargarFacturas = useCallback(async () => {
     const params = new URLSearchParams();
@@ -60,8 +63,14 @@ export default function FacturacionPage() {
   }, []);
 
   useEffect(() => {
-    if (modal === "crear" && formTipo === "Compra") {
-      fetch("/api/solicitudes-pago").catch(() => {});
+    if (modal === "crear") {
+      fetch("/api/periodos").then(r => r.json()).then(d => {
+        const abierto = (d.periodos || []).find((pf: PeriodoFiscal) => pf.estado === "Abierto");
+        setPeriodoAbierto(abierto || null);
+      }).catch(() => setPeriodoAbierto(null));
+      if (formTipo === "Compra") {
+        fetch("/api/solicitudes-pago").catch(() => {});
+      }
     }
   }, [modal, formTipo]);
 
@@ -86,6 +95,8 @@ export default function FacturacionPage() {
         const ejecutado = Number(pp.monto_ejecutado);
         todas.push({
           ...pp,
+          nombre_area: p.nombre_area,
+          nombre_periodo: p.nombre_periodo,
           saldo_disponible: asignado - ejecutado,
         });
       }
@@ -288,7 +299,18 @@ export default function FacturacionPage() {
             <Input label="Monto" type="number" value={formMonto} onChange={e => setFormMonto(e.target.value)} />
           </div>
           <div className="flex-1">
-            <Input label="Fecha emisión" type="date" value={formFechaEmision} onChange={e => setFormFechaEmision(e.target.value)} />
+            <Input
+              label="Fecha emisión"
+              type="date"
+              value={formFechaEmision}
+              onChange={e => setFormFechaEmision(e.target.value)}
+              min={periodoAbierto?.fecha_inicio ?? undefined}
+              max={periodoAbierto?.fecha_fin ?? undefined}
+              hint={periodoAbierto ? `Fechas válidas: ${periodoAbierto.fecha_inicio} — ${periodoAbierto.fecha_fin}` : undefined}
+            />
+            {!periodoAbierto && modal === "crear" && (
+              <p className="mt-1 text-xs text-amber-600">⚠ No hay ningún período fiscal abierto actualmente</p>
+            )}
           </div>
         </div>
 
@@ -304,7 +326,7 @@ export default function FacturacionPage() {
                 { value: "", label: "Sin partida" },
                 ...partidas.map(p => ({
                   value: String(p.id_partida),
-                  label: `${nombreCategoria(p.id_categoria)} — Saldo: $${p.saldo_disponible.toLocaleString()}`,
+                  label: `${nombreCategoria(p.id_categoria)} (${p.nombre_area ?? "?"} - ${p.nombre_periodo ?? "?"}) — Saldo: $${p.saldo_disponible.toLocaleString()}`,
                 })),
               ]}
               value={formPartida}

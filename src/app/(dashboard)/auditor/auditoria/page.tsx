@@ -128,7 +128,7 @@ export default function AuditoriaPage() {
   const moduloOptions = MODULOS.map((m) => ({ value: m, label: m }));
   const estadoOptions = ESTADOS.map((e) => ({ value: e, label: e }));
   const allTipos = Object.values(TIPOS_POR_MODULO).flat();
-  const tipoOptions = allTipos.map((t) => ({ value: t, label: t }));
+  const tipoOptions = [...new Set(allTipos)].map((t) => ({ value: t, label: t }));
 
   const columns: Column<Observacion>[] = [
     { key: "id_observacion", header: "#" },
