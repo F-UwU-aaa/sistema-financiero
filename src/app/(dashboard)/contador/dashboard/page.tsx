@@ -11,6 +11,7 @@ import DataTable from "@/components/ui/DataTable";
 import Alert from "@/components/ui/Alert";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, Banknote } from "lucide-react";
 import type { Column } from "@/components/ui/DataTable";
+import ChartBarras from "@/components/dashboard/ChartBarras";
 
 interface CategoriaEjecucion {
   nombre_categoria: string;
@@ -73,6 +74,26 @@ export default function DashboardContadorPage() {
   const totalPagos = datos.flujo_caja.reduce((s: number, f: FlujoCaja) => s + f.pagos_mes, 0);
   const totalCobros = datos.flujo_caja.reduce((s: number, f: FlujoCaja) => s + f.cobros_mes, 0);
 
+  const ejecucionChartData = (datos.ejecucion_presupuestaria || []).map((e: CategoriaEjecucion) => ({
+    name: e.nombre_categoria,
+    Asignado: e.asignado,
+    Ejecutado: e.ejecutado,
+  }));
+
+  const estadoColors: Record<string, string> = {
+    Pendiente: "#d97706", Solicitada: "#2563eb", Pagada: "#16a34a", Cobrada: "#16a34a", Anulada: "#dc2626",
+  };
+
+  const facturasData = datos.facturas_por_estado || [];
+  const estadosUnicos = [...new Set(facturasData.map((d: any) => d.estado as string))] as string[];
+  const tiposUnicos = [...new Set(facturasData.map((d: any) => d.tipo as string))] as string[];
+  const facturasChartData = tiposUnicos.map((tipo) => {
+    const entry: { name: string; [k: string]: string | number } = { name: tipo };
+    estadosUnicos.forEach((est) => { entry[est] = facturasData.find((d: any) => d.tipo === tipo && d.estado === est)?.cantidad || 0; });
+    return entry;
+  });
+  const facturasChartBars = estadosUnicos.map((est) => ({ key: est, color: estadoColors[est] || "#64748b" }));
+
   return (
     <div className="p-6">
       <PageHeader
@@ -131,7 +152,11 @@ export default function DashboardContadorPage() {
               </div>
             </div>
           </CardHeader>
-          <DataTable columns={ejecucionColumns} data={datos.ejecucion_presupuestaria} keyExtractor={(e) => e.nombre_categoria} />
+          {ejecucionChartData.length > 0 ? (
+            <ChartBarras data={ejecucionChartData} bars={[{ key: "Asignado", color: "#2563eb" }, { key: "Ejecutado", color: "#16a34a" }]} height={260} />
+          ) : (
+            <p className="p-4 text-center text-sm text-text-muted">Sin datos</p>
+          )}
         </Card>
       </div>
 
@@ -142,8 +167,12 @@ export default function DashboardContadorPage() {
         </Card>
 
         <Card>
-          <CardHeader>Facturas por Tipo/Estado</CardHeader>
-          <DataTable columns={facturasColumns} data={datos.facturas_por_estado} keyExtractor={(_f, i) => String(i)} />
+          <CardHeader>Facturación por Tipo</CardHeader>
+          {facturasChartData.length > 0 ? (
+            <ChartBarras data={facturasChartData} bars={facturasChartBars} height={260} />
+          ) : (
+            <p className="p-4 text-center text-sm text-text-muted">Sin datos</p>
+          )}
         </Card>
       </div>
 

@@ -8,7 +8,8 @@ import Card, { CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import EstadoBadge from "@/components/ui/EstadoBadge";
 import DataTable, { type Column } from "@/components/ui/DataTable";
-import { Users, UserCheck, UserX, LogIn } from "lucide-react";
+import { Users, UserCheck, UserX, LogIn, Shield } from "lucide-react";
+import ChartDonut from "@/components/dashboard/ChartDonut";
 
 interface RolCount {
   nombre_rol: string;
@@ -80,22 +81,14 @@ export default function DashboardAdminPage() {
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>Usuarios por Rol</CardHeader>
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border">
-              <tr>
-                <th className="py-2 text-xs font-medium text-text-secondary uppercase">Rol</th>
-                <th className="py-2 text-xs font-medium text-text-secondary uppercase">Cantidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosPorRol.map((r) => (
-                <tr key={r.nombre_rol} className="border-b border-border last:border-0">
-                  <td className="py-2">{r.nombre_rol}</td>
-                  <td className="py-2 font-medium">{r.cantidad}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {usuariosPorRol.length > 0 ? (
+            <ChartDonut
+              data={usuariosPorRol.map((r) => ({ name: r.nombre_rol, value: Number(r.cantidad) }))}
+              height={260}
+            />
+          ) : (
+            <p className="p-4 text-center text-sm text-text-muted">Sin datos</p>
+          )}
         </Card>
 
         <Card>

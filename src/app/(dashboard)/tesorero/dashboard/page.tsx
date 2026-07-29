@@ -10,6 +10,7 @@ import KpiCard from "@/components/ui/KpiCard";
 import Badge from "@/components/ui/Badge";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
+import ChartBarras from "@/components/dashboard/ChartBarras";
 
 interface Cuenta {
   id_cuenta_bancaria: number;
@@ -117,6 +118,20 @@ export default function DashboardTesoreroPage() {
           keyExtractor={(c) => c.id_cuenta_bancaria}
           emptyMessage="No hay cuentas registradas"
         />
+      </Card>
+
+      <Card className="mb-6">
+        <CardHeader>Distribución de Saldos</CardHeader>
+        {datos.cuentas.length > 0 ? (
+          <ChartBarras
+            data={datos.cuentas.map((c: Cuenta) => ({ name: c.nombre_cuenta, Saldo: c.saldo_actual }))}
+            bars={[{ key: "Saldo", color: "#2563eb" }]}
+            height={200}
+            horizontal
+          />
+        ) : (
+          <p className="p-4 text-center text-sm text-text-muted">Sin cuentas</p>
+        )}
       </Card>
 
       <Card>

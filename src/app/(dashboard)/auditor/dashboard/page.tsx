@@ -11,6 +11,8 @@ import EstadoBadge from "@/components/ui/EstadoBadge";
 import Badge from "@/components/ui/Badge";
 import Alert from "@/components/ui/Alert";
 import ChartDonut from "@/components/dashboard/ChartDonut";
+import ChartBarras from "@/components/dashboard/ChartBarras";
+import ChartGauge from "@/components/dashboard/ChartGauge";
 import { FileSpreadsheet, FileText, AlertTriangle, ShieldCheck } from "lucide-react";
 
 interface ModuloCount {
@@ -86,6 +88,21 @@ export default function DashboardAuditorPage() {
     "En revisión": "bg-yellow-100 text-yellow-800",
     Cerrada: "bg-green-100 text-green-800",
   };
+
+  const itemsValidos = cumplimiento.filter((c) => c.valor === 1).length;
+  const gaugeValue = cumplimiento.length > 0 ? (itemsValidos / cumplimiento.length) * 100 : 0;
+
+  const moduloChartData = porModulo.map((m) => ({ name: m.modulo, Cantidad: m.cantidad }));
+
+  const estadoDonutData = porEstado.map((e) => ({
+    name: e.estado,
+    value: e.cantidad,
+    color:
+      e.estado === "Abierta" ? "#d97706" :
+      e.estado === "En revisión" ? "#2563eb" :
+      e.estado === "Cerrada" ? "#16a34a" :
+      undefined,
+  }));
 
   const estadoColorMap: Record<string, "default" | "danger" | "warning" | "success"> = {
     Abierta: "danger",
@@ -165,7 +182,7 @@ export default function DashboardAuditorPage() {
       />
 
       {/* Summary cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {porEstado.map((e) => (
           <KpiCard
             key={e.estado}
@@ -179,6 +196,11 @@ export default function DashboardAuditorPage() {
           value={total}
           color="primary"
         />
+        {cumplimiento.length > 0 && (
+          <Card className="flex flex-col items-center justify-center p-3">
+            <ChartGauge value={gaugeValue} size={100} label="Cumplimiento" />
+          </Card>
+        )}
       </div>
 
       {/* Alertas activas */}
@@ -226,24 +248,25 @@ export default function DashboardAuditorPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>Por Módulo</CardHeader>
-          <DataTable
-            columns={moduloColumns}
-            data={porModulo}
-            keyExtractor={(m) => m.modulo}
-            emptyMessage="Sin datos"
-            compact
-          />
+          {moduloChartData.length > 0 ? (
+            <ChartBarras
+              data={moduloChartData}
+              bars={[{ key: "Cantidad", color: "#2563eb" }]}
+              height={250}
+              horizontal
+            />
+          ) : (
+            <p className="p-4 text-center text-sm text-text-muted">Sin datos</p>
+          )}
         </Card>
 
         <Card>
-          <CardHeader>Observaciones Recientes</CardHeader>
-          <DataTable
-            columns={recientesColumns}
-            data={recientes}
-            keyExtractor={(r) => r.id_observacion}
-            emptyMessage="Sin observaciones"
-            compact
-          />
+          <CardHeader>Estado de Observaciones</CardHeader>
+          {estadoDonutData.length > 0 ? (
+            <ChartDonut data={estadoDonutData} height={250} />
+          ) : (
+            <p className="p-4 text-center text-sm text-text-muted">Sin datos</p>
+          )}
         </Card>
       </div>
     </div>
